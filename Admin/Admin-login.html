@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <link rel="stylesheet" href="../Common.css">
+    <link rel="stylesheet" href="Admin-login.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase-config.js"></script>
+    <script src="Admin-login.js" defer></script>
+</head>
+<body>
+    <main class="admin-login-main">
+        <div class="admin-login-box">
+            <div class="admin-logo">
+                <img src="../Landing/OreoBitesLogo.jpg" alt="OreoBites logo">
+            </div>
+            <h1>WELCOME ADMIN!</h1>
+
+            <form class="admin-auth-form" id="admin-login-form">
+                <div class="input-group">
+                    <label for="admin-email">EMAIL</label>
+                    <input type="email" id="admin-email" name="email" required>
+                </div>
+
+                <div class="input-group">
+                    <label for="admin-password">PASSWORD</label>
+                    <input type="password" id="admin-password" name="password" required>
+                    <button type="button" class="toggle-password" id="toggle-password" aria-label="Show password">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+
+                <p id="login-error" class="admin-error"></p>
+
+                <div class="submit-row">
+                    <button type="submit" class="submit-btn" aria-label="Log in">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+</body>
+</html>

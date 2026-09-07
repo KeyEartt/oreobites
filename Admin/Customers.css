@@ -1,0 +1,132 @@
+/*CUSTOMERS*/
+
+.customers-view, .customer-detail-view {
+    display: none;
+    background-color: var(--cream);
+    min-height: 80vh;
+    padding: 40px;
+}
+
+.customers-view.active, .customer-detail-view.active {
+    display: block;
+}
+
+.customers-view h1 {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 30px;
+}
+
+.customers-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+}
+
+.customers-table thead {
+    background: var(--brown);
+    color: var(--white);
+}
+
+.customers-table th, .customers-table td {
+    text-align: left;
+    padding: 14px 16px;
+}
+
+.customers-table tbody tr:nth-child(even) {
+    background: #f0e6c8;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-right: 8px;
+    color: var(--brown);
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    font-family: var(--font);
+    font-weight: bold;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.customer-detail-card {
+    background: var(--white);
+    padding: 30px;
+    border-radius: 8px;
+    max-width: 600px;
+}
+
+.customer-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.customer-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #e8dcc0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--brown);
+}
+
+.detail-subtext {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.detail-field label {
+    display: block;
+    font-weight: bold;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+}
+
+.detail-field.wide {
+    margin-bottom: 20px;
+    border-bottom: 1.5px solid var(--brown);
+    padding-bottom: 10px;
+}
+
+.order-history {
+    margin-bottom: 24px;
+}
+
+.order-history label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.order-history ul {
+    font-size: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.deactivate-btn {
+    padding: 10px 18px;
+    border: 1.5px solid var(--brown);
+    background: transparent;
+    font-family: var(--font);
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 4px;
+}
