@@ -1,0 +1,32 @@
+/*TAGLINE*/
+
+.tag_line {
+    background-color: var(--cream);
+    min-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 20px;
+    position: relative;
+}
+
+.tag_line h1{
+    max-width: 500px;
+    font-size: 1.8rem;
+    line-height: 1.6rem;
+    font-weight: normal;
+}
+
+.cake-img {
+  position: absolute;
+}
+
+.cake-1 { top: 40%; left: 5%;  width: 140px; }
+.cake-2 { top: 65%; left: 2%;  width: 120px; }
+.cake-3 { top: 30%; left: 22%; width: 60px;  }
+.cake-4 { top: 55%; left: 18%; width: 140px; }
+.cake-5 { top: 78%; left: 8%;  width: 150px; }
+.cake-6 { top: 60%; left: 40%; width: 130px; }
+.cake-7 { top: 70%; right: 8%; width: 150px; }
