@@ -1,3 +1,122 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================
+   BASE — typography, background, defaults
+   ============================================ */
+@layer base {
+    html {
+        font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply bg-milk-cream text-oreo-noir antialiased;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+        @apply font-bold tracking-tight;
+    }
+
+    /* Selection color */
+    ::selection {
+        @apply bg-oreo-noir text-milk-cream;
+    }
+}
+
+/* ============================================
+   COMPONENTS — reusable UI primitives
+   ============================================ */
+@layer components {
+    /* ---------- Buttons ---------- */
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2
+               bg-oreo-noir hover:bg-cookie-brown text-white
+               font-medium px-6 py-3 rounded-xl
+               transition-all duration-200
+               disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+
+    .btn-secondary {
+        @apply inline-flex items-center justify-center gap-2
+               border border-cookie-brown text-cookie-brown
+               hover:bg-cookie-brown hover:text-white
+               font-medium px-6 py-3 rounded-xl
+               transition-all duration-200;
+    }
+
+    .btn-ghost {
+        @apply inline-flex items-center justify-center gap-2
+               text-cookie-brown hover:text-oreo-noir
+               font-medium px-4 py-2 rounded-lg
+               transition-all duration-200;
+    }
+
+    .btn-accent {
+        @apply inline-flex items-center justify-center gap-2
+               bg-golden hover:bg-chocolate text-oreo-noir hover:text-white
+               font-semibold px-6 py-3 rounded-full
+               transition-all duration-200;
+    }
+
+    /* ---------- Cards ---------- */
+    .card {
+        @apply bg-white rounded-2xl border border-stone-200 shadow-soft;
+    }
+
+    .card-hover {
+        @apply bg-white rounded-2xl border border-stone-200 shadow-soft
+               hover:shadow-card hover:-translate-y-0.5
+               transition-all duration-200;
+    }
+
+    /* ---------- Inputs ---------- */
+    .input-field {
+        @apply w-full bg-white border border-stone-300 rounded-xl
+               px-4 py-3 text-oreo-noir placeholder-stone-400
+               focus:ring-2 focus:ring-oreo-noir focus:border-transparent
+               outline-none transition-all;
+    }
+
+    .input-label {
+        @apply block text-sm font-medium text-cookie-brown mb-1.5;
+    }
+
+    /* ---------- Badges ---------- */
+    .badge {
+        @apply inline-flex items-center gap-1 text-xs font-semibold
+               px-2.5 py-1 rounded-full;
+    }
+    .badge-success { @apply badge bg-green-100 text-green-800; }
+    .badge-warning { @apply badge bg-amber-100 text-amber-800; }
+    .badge-danger  { @apply badge bg-red-100 text-red-800; }
+    .badge-info    { @apply badge bg-blue-100 text-blue-800; }
+    .badge-neutral { @apply badge bg-stone-100 text-stone-700; }
+
+    /* ---------- Section heading ---------- */
+    .section-title {
+        @apply text-2xl md:text-3xl font-bold text-oreo-noir tracking-tight;
+    }
+    .section-subtitle {
+        @apply text-stone-500 mt-1;
+    }
+
+    /* ---------- Container ---------- */
+    .container-app {
+        @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    }
+}
+
+/* ============================================
+   UTILITIES
+   ============================================ */
+@layer utilities {
+    .text-display {
+        font-family: 'Outfit', sans-serif;
+    }
+    .text-mono {
+        font-family: 'JetBrains Mono', monospace;
+    }
+}

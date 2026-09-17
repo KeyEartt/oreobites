@@ -11,7 +11,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Exclude PayMongo webhook from CSRF
+        $middleware->validateCsrfTokens(except: [
+            'api/webhook',
+        ]);
+
+        // Register custom middleware aliases
+        $middleware->alias([
+    'require.staff' => \App\Http\Middleware\RequireStaff::class,
+    'require.admin' => \App\Http\Middleware\RequireAdmin::class,
+    'require.customer' => \App\Http\Middleware\RequireCustomer::class, // 🆕
+]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
