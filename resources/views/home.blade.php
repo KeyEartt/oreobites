@@ -10,26 +10,26 @@
     <div class="absolute inset-0 pointer-events-none"
          style="background: radial-gradient(circle at 70% 30%, rgba(201,169,97,0.15) 0%, transparent 55%);"></div>
 
-    <div class="container-app pt-16 pb-32 md:pt-24 md:pb-40 relative z-10">
-        <div class="grid md:grid-cols-2 gap-12 items-center">
+    <div class="container-app pt-12 pb-28 sm:pt-16 sm:pb-32 md:pt-24 md:pb-40 relative z-10">
+        <div class="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
 
-            <div>
-                <span class="badge bg-white/5 text-golden border border-white/10">
+            <div class="text-center md:text-left">
+                <span class="badge bg-white/5 text-golden border border-white/10 mx-auto md:mx-0">
                     <span class="w-1.5 h-1.5 rounded-full bg-golden animate-pulse-soft"></span>
                     Fresh batches daily
                 </span>
 
-                <h1 class="font-display font-extrabold tracking-tight mt-6 leading-[1.02] text-5xl md:text-6xl lg:text-7xl">
+                <h1 class="font-display font-extrabold tracking-tight mt-5 md:mt-6 leading-[1.05] text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
                     Sweet.<br>
                     Creamy.<br>
                     <span class="text-golden">Chocolate-coated.</span>
                 </h1>
 
-                <p class="text-stone-300 text-lg mt-6 max-w-md leading-relaxed">
+                <p class="text-stone-300 text-base sm:text-lg mt-5 md:mt-6 max-w-md mx-auto md:mx-0 leading-relaxed">
                     Bite-sized Oreo cheesecake, frozen and glazed in rich dark or smooth white chocolate. Made for students, shared between friends.
                 </p>
 
-                <div class="flex flex-wrap gap-3 mt-8">
+                <div class="flex flex-col sm:flex-row gap-3 mt-7 md:mt-8 justify-center md:justify-start">
                     <a href="/menu" class="btn-accent">
                         Order Now
                         <x-icon name="arrow-right" class="w-4 h-4" />
@@ -43,7 +43,7 @@
                     </a>
                 </div>
 
-                <div class="flex flex-wrap gap-x-6 gap-y-3 mt-10 text-sm text-stone-400">
+                <div class="flex flex-wrap justify-center md:justify-start gap-x-5 gap-y-3 mt-8 md:mt-10 text-sm text-stone-400">
                     <div class="flex items-center gap-2">
                         <x-icon name="location" class="w-4 h-4 text-golden" />
                         Campus pickup
@@ -92,19 +92,19 @@
     </div>
 
     <svg viewBox="0 0 1440 120" preserveAspectRatio="none"
-         class="absolute bottom-0 left-0 w-full h-16 md:h-24 text-milk-cream">
+         class="absolute bottom-0 left-0 w-full h-14 sm:h-16 md:h-24 text-milk-cream">
         <path fill="currentColor" d="M0,80 C120,60 240,100 360,88 C480,76 600,40 720,48 C840,56 960,96 1080,88 C1200,80 1320,60 1440,72 L1440,120 L0,120 Z"/>
     </svg>
 </section>
 
-{{-- ============ FEATURED PRODUCTS ============ --}}
+{{-- ============ FEATURED ============ --}}
 <section class="container-app pt-12 md:pt-16 pb-16">
-    <div class="flex items-end justify-between mb-8">
+    <div class="flex items-end justify-between mb-6 md:mb-8 gap-4">
         <div>
             <h2 class="section-title">Featured Bites</h2>
             <p class="section-subtitle">Our most loved flavors, ready to order</p>
         </div>
-        <a href="/menu" class="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-cookie-brown hover:text-oreo-noir transition-colors">
+        <a href="/menu" class="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-cookie-brown hover:text-oreo-noir transition-colors shrink-0">
             View all
             <x-icon name="arrow-right" class="w-4 h-4" />
         </a>
@@ -116,15 +116,15 @@
             <p class="text-stone-500 mt-3">No products available yet.</p>
         </div>
     @else
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             @foreach($featured as $product)
                 <x-product-card :product="$product" />
             @endforeach
         </div>
     @endif
 
-    <div class="text-center sm:hidden mt-8">
-        <a href="/menu" class="btn-secondary">View all</a>
+    <div class="text-center sm:hidden mt-6">
+        <a href="/menu" class="btn-secondary w-full">View all</a>
     </div>
 </section>
 
@@ -163,18 +163,18 @@
     </div>
 </section>
 
-{{-- ============ CTA BAND ============ --}}
+{{-- ============ CTA ============ --}}
 <section class="container-app pb-20">
-    <div class="rounded-3xl bg-oreo-noir text-milk-cream p-8 md:p-12
+    <div class="rounded-3xl bg-oreo-noir text-milk-cream p-6 sm:p-8 md:p-12
                 flex flex-col md:flex-row md:items-center gap-6 relative overflow-hidden">
         <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-golden/10 blur-2xl"></div>
 
-        <div class="flex-1 relative z-10">
-            <h3 class="font-display font-bold text-2xl md:text-3xl">Pre-order now, pick up on campus.</h3>
-            <p class="text-stone-400 mt-2">Fresh batches go live every morning. Order before they run out.</p>
+        <div class="flex-1 relative z-10 text-center md:text-left">
+            <h3 class="font-display font-bold text-xl sm:text-2xl md:text-3xl">Pre-order now, pick up on campus.</h3>
+            <p class="text-stone-400 mt-2 text-sm sm:text-base">Fresh batches go live every morning. Order before they run out.</p>
         </div>
 
-        <a href="/menu" class="btn-accent shrink-0 relative z-10">
+        <a href="/menu" class="btn-accent shrink-0 relative z-10 self-center md:self-auto">
             Browse the Menu
             <x-icon name="arrow-right" class="w-4 h-4" />
         </a>
