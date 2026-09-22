@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Dashboard\StaffController;
 use App\Http\Controllers\Dashboard\AdminController;
 use App\Services\SupabaseService;
+use App\Http\Controllers\LegalController;
 
 // ===== Public =====
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -60,3 +61,16 @@ Route::middleware(['require.admin'])->group(function () {
     Route::post('/admin/update-stock', [AdminController::class, 'updateStock']);
     Route::post('/admin/toggle-product', [AdminController::class, 'toggleProduct']);
 });
+
+// ===== Public =====
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/menu', [MenuController::class, 'index'])->name('menu');
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+Route::get('/success', [CheckoutController::class, 'success'])->name('success');
+Route::get('/track', [TrackingController::class, 'index'])->name('track');
+
+// Legal pages (NEW)
+Route::get('/terms', [LegalController::class, 'terms'])->name('terms');
+Route::get('/privacy', [LegalController::class, 'privacy'])->name('privacy');
+
+// ... rest of routes unchanged
