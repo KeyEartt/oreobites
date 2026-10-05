@@ -23,8 +23,11 @@
 <section class="container-app py-6 md:py-10">
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 md:gap-8">
 
+        {{-- QR panel (hidden until payment intent is created) --}}
+        <div id="qr-container" class="hidden lg:col-span-5 max-w-lg mx-auto card p-8"></div>
+
         {{-- LEFT --}}
-        <div class="lg:col-span-3 space-y-5 md:space-y-6">
+        <div id="checkoutFormCol" class="lg:col-span-3 space-y-5 md:space-y-6">
 
             {{-- Customer Information --}}
             <div class="card p-5 md:p-6">
@@ -44,14 +47,14 @@
                         <input id="customerName" type="text" placeholder="Juan Dela Cruz"
                                autocomplete="name" class="input-field">
                     </div>
-                        <div>
-                            <label for="customerPhone" class="input-label">Phone Number *</label>
-                            <input id="customerPhone" type="tel" placeholder="0917 123 4567"
+                    <div>
+                        <label for="customerPhone" class="input-label">Phone Number *</label>
+                        <input id="customerPhone" type="tel" placeholder="0917 123 4567"
                                autocomplete="tel" class="input-field">
-                        </div>
-                        <div>
-                            <label for="customerEmail" class="input-label">Email *</label>
-                            <input id="customerEmail" type="email" placeholder="juan@example.com"
+                    </div>
+                    <div>
+                        <label for="customerEmail" class="input-label">Email *</label>
+                        <input id="customerEmail" type="email" placeholder="juan@example.com"
                                autocomplete="email" class="input-field">
                     </div>
                 </div>
@@ -108,7 +111,7 @@
         </div>
 
         {{-- RIGHT --}}
-        <aside class="lg:col-span-2">
+        <aside id="checkoutSummaryCol" class="lg:col-span-2">
             <div class="card p-5 md:p-6 lg:sticky lg:top-24">
                 <div class="flex items-center gap-3 mb-5">
                     <div class="w-9 h-9 rounded-full bg-milk-cream flex items-center justify-center text-cookie-brown shrink-0">
@@ -147,7 +150,7 @@
                 </button>
 
                 <p class="text-xs text-stone-500 text-center mt-3 leading-relaxed">
-                    You'll be redirected to GCash to authorize the payment. Order will be prepared once confirmed.
+                    Scan the QR code with GCash to authorize the payment. Order will be prepared once confirmed.
                 </p>
 
                 <div class="mt-5 pt-5 border-t border-stone-100">

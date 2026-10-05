@@ -6,35 +6,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!summaryEl) return;
 
-    // Redirect if cart is empty
     if (cart.length === 0) {
         summaryEl.innerHTML = `
-            <p class="text-gray-500 text-center py-4">Your cart is empty.</p>
-            <a href="/menu" class="block text-center mt-4 bg-pink-600 text-white py-2 rounded-lg">Browse Menu</a>
+            <p class="text-stone-500 text-center py-4">Your cart is empty.</p>
+            <a href="/menu" class="block text-center mt-4 btn-primary">Browse Menu</a>
         `;
         return;
     }
 
-    // Render cart items
     summaryEl.innerHTML = cart.map(item => `
         <div class="pt-3 first:pt-0 flex justify-between">
             <div>
                 <span class="font-medium">${item.name}</span>
-                <span class="text-gray-500 text-sm ml-2">×${item.quantity}</span>
+                <span class="text-stone-500 text-sm ml-2">×${item.quantity}</span>
             </div>
             <span class="font-medium">₱${item.price * item.quantity}</span>
         </div>
     `).join('');
 
-    // Calculate totals
     const subtotal = cart.reduce((sum, i) => sum + i.price * i.quantity, 0);
     let deliveryFee = 0;
     let eta = 'Ready for pickup';
 
-    const subtotalEl = document.getElementById('subtotalValue');
-    const feeEl = document.getElementById('deliveryFeeValue');
-    const etaEl = document.getElementById('etaValue');
-    const totalEl = document.getElementById('totalValue');
+    const subtotalEl   = document.getElementById('subtotalValue');
+    const feeEl        = document.getElementById('deliveryFeeValue');
+    const etaEl        = document.getElementById('etaValue');
+    const totalEl      = document.getElementById('totalValue');
     const addressField = document.getElementById('addressField');
 
     function updateTotals() {
@@ -42,38 +39,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selected) return;
 
         deliveryFee = parseFloat(selected.dataset.fee);
-        const type = selected.value;
-        const eta_minutes = parseInt(selected.dataset.eta);
+        const type  = selected.value;
+        const etaMinutes = parseInt(selected.dataset.eta);
 
-        // Update ETA text
-        if (type === 'pickup') {
-            eta = 'Ready immediately';
-        } else {
-            eta = `~${eta_minutes} minutes`;
-        }
+        eta = type === 'pickup' ? 'Ready immediately' : `~${etaMinutes} minutes`;
 
-        // Show/hide address field
         if (type === 'pickup') {
             addressField.classList.add('hidden');
         } else {
             addressField.classList.remove('hidden');
         }
 
-        // Update display
         subtotalEl.textContent = `₱${subtotal}`;
-        feeEl.textContent = deliveryFee === 0 ? 'Free' : `₱${deliveryFee}`;
-        etaEl.textContent = eta;
-        totalEl.textContent = `₱${subtotal + deliveryFee}`;
+        feeEl.textContent      = deliveryFee === 0 ? 'Free' : `₱${deliveryFee}`;
+        etaEl.textContent      = eta;
+        totalEl.textContent    = `₱${subtotal + deliveryFee}`;
     }
 
-    // Attach listeners to delivery radios
     document.querySelectorAll('input[name="deliveryType"]').forEach(radio => {
         radio.addEventListener('change', updateTotals);
     });
 
     updateTotals();
 
-    // Payment button
     const payBtn = document.getElementById('payButton');
     const errorEl = document.getElementById('errorMessage');
 
@@ -85,7 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const deliveryType = selectedZone.value;
         const address = document.getElementById('deliveryAddress')?.value.trim() || '';
 
-        // Validation
         errorEl.classList.add('hidden');
         if (!name) return showError('Please enter your name.');
         if (!phone) return showError('Please enter your phone number.');
@@ -93,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (deliveryType !== 'pickup' && !address) return showError('Please enter your delivery address.');
 
         payBtn.disabled = true;
-        payBtn.innerHTML = '⏳ Processing...';
+        payBtn.innerHTML = '⏳ Generating QR…';
 
         try {
             const response = await fetch('/api/create-payment', {
@@ -109,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     customer_email: email,
                     delivery_type: deliveryType,
                     delivery_address: deliveryType === 'pickup' ? null : address,
-                })
+                }),
             });
 
             const data = await response.json();
@@ -118,9 +105,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || 'Payment failed.');
             }
 
-            // Clear cart and redirect
+            if (!data.qr_image || !data.orderNumber) {
+                throw new Error('Payment gateway returned an unexpected response.');
+            }
+
             localStorage.removeItem('oreo-cart');
-            window.location.href = data.redirectUrl;
+            showQR(data.qr_image, data.orderNumber);
+            startPolling(data.orderNumber);
 
         } catch (err) {
             showError(err.message || 'Something went wrong. Please try again.');
@@ -128,6 +119,47 @@ document.addEventListener('DOMContentLoaded', () => {
             payBtn.innerHTML = '💳 Pay with GCash';
         }
     });
+
+    function showQR(imageUrl, orderNumber) {
+        const container = document.getElementById('qr-container');
+        const leftCol   = document.getElementById('checkoutFormCol');
+        const rightCol  = document.getElementById('checkoutSummaryCol');
+
+        if (leftCol)  leftCol.classList.add('hidden');
+        if (rightCol) rightCol.classList.add('hidden');
+
+        container.innerHTML = `
+            <div class="text-center">
+                <p class="font-display font-bold text-xl text-oreo-noir mb-2">Scan to pay</p>
+                <p class="text-sm text-stone-500 mb-5">Open GCash, Maya, or your bank app and scan the code below.</p>
+                <img src="${imageUrl}" alt="QR Ph payment code" class="mx-auto w-64 h-64 rounded-lg border border-stone-200 bg-white" />
+                <p class="mt-5 text-sm">Order #: <strong class="font-mono">${orderNumber}</strong></p>
+                <p class="mt-3 text-sm text-stone-500 flex items-center justify-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    Waiting for payment…
+                </p>
+            </div>
+        `;
+        container.classList.remove('hidden');
+        container.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function startPolling(orderNumber) {
+        const poll = setInterval(async () => {
+            try {
+                const r = await fetch(`/api/order/${encodeURIComponent(orderNumber)}`, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                if (!r.ok) return;
+                const order = await r.json();
+                const status = Array.isArray(order) ? order[0]?.payment_status : order?.payment_status;
+                if (status === 'paid') {
+                    clearInterval(poll);
+                    window.location.href = `/success?order=${encodeURIComponent(orderNumber)}`;
+                }
+            } catch (_) { /* transient — keep polling */ }
+        }, 3000);
+    }
 
     function showError(msg) {
         errorEl.textContent = msg;

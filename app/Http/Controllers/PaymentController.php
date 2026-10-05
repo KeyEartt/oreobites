@@ -6,6 +6,7 @@ use App\Services\SupabaseService;
 use App\Services\PaymongoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
@@ -15,122 +16,117 @@ class PaymentController extends Controller
         PaymongoService $paymongo
     ) {
         $validated = $request->validate([
-            'items' => 'required|array|min:1',
-            'customer_name' => 'required|string|max:255',
-            'customer_phone' => 'required|string|max:20',
-            'customer_email' => 'required|email',
-            'delivery_type' => 'required|in:pickup,standard,same_day',
-            'delivery_address' => 'nullable|string',
+            'items'                => 'required|array|min:1',
+            'items.*.product_id'   => 'required|string',
+            'items.*.quantity'     => 'required|integer|min:1',
+            'customer_name'        => 'required|string|max:255',
+            'customer_phone'       => 'required|string|max:20',
+            'customer_email'       => 'required|email',
+            'delivery_type'        => 'required|in:pickup,standard,same_day',
+            'delivery_address'     => 'nullable|string',
         ]);
 
-        $items = $validated['items'];
-
-        // 1. Get the delivery fee from DB (never trust the client)
+        // 1. Delivery zone — fee taken from DB, never from client
         $zones = $supabase->fetchDeliveryZones();
-        $zone = collect($zones)->firstWhere('type', $validated['delivery_type']);
-
+        $zone  = collect($zones)->firstWhere('type', $validated['delivery_type']);
         if (!$zone) {
             return response()->json(['error' => 'Invalid delivery option.'], 400);
         }
-
-        $deliveryFee = $zone['fee'];
+        $deliveryFee = (int) $zone['fee'];
         $eta = $validated['delivery_type'] === 'pickup'
             ? 'Ready immediately'
             : $zone['estimated_minutes'] . ' minutes';
 
-        // 2. Validate stock and recalculate subtotal server-side
-        $subtotal = 0;
-        foreach ($items as $item) {
+        // 2. Server-side stock check + subtotal + enrich items for storage
+        $subtotal      = 0;
+        $enrichedItems = [];
+
+        foreach ($validated['items'] as $item) {
             $product = $supabase->fetchProductById($item['product_id']);
-
             if (!$product) {
-                return response()->json(['error' => "Product not found."], 400);
+                return response()->json(['error' => 'Product not found.'], 400);
             }
-
             if ($product['stock'] < $item['quantity']) {
                 return response()->json([
                     'error' => "Only {$product['stock']} left of \"{$product['name']}\".",
                 ], 400);
             }
 
-            $subtotal += $product['price'] * $item['quantity'];
+            $lineTotal = $product['price'] * $item['quantity'];
+            $subtotal += $lineTotal;
+
+            $enrichedItems[] = [
+                'product_id' => $product['id'],
+                'name'       => $product['name'],
+                'variant'    => $product['variant'] ?? null,
+                'price'      => (int) $product['price'],
+                'quantity'   => (int) $item['quantity'],
+                'line_total' => $lineTotal,
+            ];
         }
 
-        $total = $subtotal + $deliveryFee;
+        $total            = $subtotal + $deliveryFee;
         $amountInCentavos = (int) round($total * 100);
 
-        // 3. Create Payment Intent
-        $piResult = $paymongo->createPaymentIntent(
+        // 3. PayMongo: PI -> PM -> attach
+        $piResponse = $paymongo->createPaymentIntent(
             $amountInCentavos,
             "Oreo Bites order for {$validated['customer_name']}"
         );
+        if (!$piResponse || empty($piResponse['data']['id'])) {
+            return response()->json(['error' => 'Payment gateway error (PI).'], 502);
+        }
+        $paymentIntentId = $piResponse['data']['id'];
 
-        if (!$piResult || !isset($piResult['data']['id'])) {
-            return response()->json(['error' => 'Payment gateway error (PI).'], 500);
+        $pmResponse = $paymongo->createPaymentMethod();
+        if (!$pmResponse || empty($pmResponse['data']['id'])) {
+            return response()->json(['error' => 'Payment gateway error (PM).'], 502);
+        }
+        $paymentMethodId = $pmResponse['data']['id'];
+
+        $attachResponse = $paymongo->attachPaymentMethod($paymentIntentId, $paymentMethodId);
+        if (!$attachResponse) {
+            return response()->json(['error' => 'Payment gateway error (Attach).'], 502);
         }
 
-        $paymentIntentId = $piResult['data']['id'];
-
-        // 4. Create Payment Method
-        $pmResult = $paymongo->createPaymentMethod();
-
-        if (!$pmResult || !isset($pmResult['data']['id'])) {
-            return response()->json(['error' => 'Payment gateway error (PM).'], 500);
+        $qrImageUrl = $attachResponse['data']['attributes']['next_action']['code']['image_url'] ?? null;
+        if (!$qrImageUrl) {
+            Log::error('PayMongo attach returned no QR image', ['attach' => $attachResponse]);
+            return response()->json(['error' => 'QR code generation failed.'], 502);
         }
 
-        $paymentMethodId = $pmResult['data']['id'];
-
-        // 5. Generate unique order number
+        // 4. Save order
         $orderNumber = 'ORE-' . date('Ymd') . '-' . strtoupper(Str::random(6));
 
-        // 6. Save order to Supabase BEFORE redirecting
         $orderData = [
-            'order_number' => $orderNumber,
-            'customer_name' => $validated['customer_name'],
-            'customer_phone' => $validated['customer_phone'],
-            'customer_email' => $validated['customer_email'],
-            'delivery_type' => $validated['delivery_type'],
-            'delivery_fee' => $deliveryFee,
-            'delivery_address' => $validated['delivery_type'] === 'pickup'
+            'order_number'      => $orderNumber,
+            'customer_name'     => $validated['customer_name'],
+            'customer_phone'    => $validated['customer_phone'],
+            'customer_email'    => $validated['customer_email'],
+            'delivery_type'     => $validated['delivery_type'],
+            'delivery_fee'      => $deliveryFee,
+            'delivery_address'  => $validated['delivery_type'] === 'pickup'
                 ? null
-                : $validated['delivery_address'],
-            'subtotal' => $subtotal,
-            'total' => $total,
-            'items' => $items,
+                : ($validated['delivery_address'] ?? null),
+            'subtotal'          => $subtotal,
+            'total'             => $total,
+            'items'             => $enrichedItems,
             'payment_intent_id' => $paymentIntentId,
-            'payment_status' => 'unpaid',
-            'status' => 'pending',
-            'eta' => $eta,
+            'payment_status'    => 'unpaid',
+            'status'            => 'pending',
+            'eta'               => $eta,
         ];
 
         $savedOrder = $supabase->createOrder($orderData);
-
         if (!$savedOrder) {
-            return response()->json([
-                'error' => 'Failed to save order. Please try again.',
-            ], 500);
+            return response()->json(['error' => 'Failed to save order.'], 500);
         }
 
-        // 7. Attach payment method with return_url containing order number
-        $returnUrl = route('success') . '?order=' . $orderNumber;
-        $attachResult = $paymongo->attachPaymentMethod(
-            $paymentIntentId,
-            $paymentMethodId,
-            $returnUrl
-        );
-
-        $redirectUrl = $attachResult['data']['attributes']['next_action']['redirect']['url'] ?? null;
-
-        if (!$redirectUrl) {
-            return response()->json([
-                'error' => 'Payment gateway did not return a checkout URL.',
-            ], 500);
-        }
-
-        // 8. Return redirect URL to frontend
+        // 5. Return QR + order number. Frontend displays QR and polls.
         return response()->json([
-            'redirectUrl' => $redirectUrl,
-            'orderNumber' => $orderNumber,
+            'qr_image'          => $qrImageUrl,
+            'orderNumber'       => $orderNumber,
+            'payment_intent_id' => $paymentIntentId,
         ]);
     }
 }

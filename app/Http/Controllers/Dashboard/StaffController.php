@@ -27,12 +27,12 @@ class StaffController extends Controller
     {
         $validated = $request->validate([
             'order_id' => 'required|string',
-            'status' => 'required|in:paid,preparing,ready,picked_up,cancelled',
+            'status'   => 'required|in:paid,preparing,ready,picked_up,cancelled',
         ]);
 
         $updated = $supabase->updateOrder($validated['order_id'], [
-            'status' => $validated['status'],
-            'updated_at' => now()->toIso8601String(),
+            'status'     => $validated['status'],
+            'updated_at' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
         ]);
 
         return response()->json([

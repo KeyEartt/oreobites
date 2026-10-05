@@ -14,8 +14,8 @@ class WebhookController extends Controller
         SupabaseService $supabase,
         PaymongoService $paymongo
     ) {
-        // 🔥 CRITICAL: Use raw body for signature verification (not parsed)[reference:3]
-        $rawBody = $request->getContent();
+        // Use raw body for signature verification (not parsed)
+        $rawBody   = $request->getContent();
         $signature = $request->header('Paymongo-Signature');
 
         // 1. Verify signature
@@ -24,7 +24,7 @@ class WebhookController extends Controller
             return response()->json(['error' => 'Invalid signature'], 401);
         }
 
-        $payload = json_decode($rawBody, true);
+        $payload   = json_decode($rawBody, true);
         $eventType = $payload['data']['attributes']['type'] ?? '';
 
         // 2. Only handle payment.paid events
@@ -33,7 +33,7 @@ class WebhookController extends Controller
             return response()->json(['received' => true]);
         }
 
-        // 3. Extract payment_intent_id (one level shallower than the payment resource)
+        // 3. Extract payment_intent_id from the nested payment resource
         $paymentIntentId = $payload['data']['attributes']['data']['attributes']['payment_intent_id'] ?? null;
 
         if (!$paymentIntentId) {
@@ -60,8 +60,8 @@ class WebhookController extends Controller
         // 6. Mark order as paid
         $updated = $supabase->updateOrder($order['id'], [
             'payment_status' => 'paid',
-            'status' => 'paid',
-            'updated_at' => now()->toIso8601String(),
+            'status'         => 'paid',
+            'updated_at'     => now()->utc()->format('Y-m-d\TH:i:s\Z'),
         ]);
 
         if (!$updated) {
@@ -80,7 +80,7 @@ class WebhookController extends Controller
             }
         }
 
-        Log::info("✅ Order {$order['order_number']} marked as paid and stock updated.");
+        Log::info("Order {$order['order_number']} marked as paid and stock updated.");
 
         return response()->json(['received' => true]);
     }

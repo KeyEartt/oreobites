@@ -12,28 +12,28 @@ class SupabaseService
 
     public function __construct()
     {
-        $url = config('supabase.url');
-        $anonKey = config('supabase.anon_key');
+        $url        = config('supabase.url');
+        $anonKey    = config('supabase.anon_key');
         $serviceKey = config('supabase.service_role_key');
 
         $this->client = new Client([
             'base_uri' => $url . '/rest/v1/',
-            'headers' => [
-                'apikey' => $anonKey,
+            'headers'  => [
+                'apikey'        => $anonKey,
                 'Authorization' => 'Bearer ' . $anonKey,
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json',
             ],
-            'verify' => false, // Windows SSL fix (remove in production)
+            'verify' => false,
         ]);
 
         $this->serviceClient = new Client([
             'base_uri' => $url . '/rest/v1/',
-            'headers' => [
-                'apikey' => $serviceKey,
+            'headers'  => [
+                'apikey'        => $serviceKey,
                 'Authorization' => 'Bearer ' . $serviceKey,
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json',
             ],
             'verify' => false,
         ]);
@@ -63,7 +63,7 @@ class SupabaseService
         }
     }
 
-    // ===== SERVICE ROLE (bypass RLS) =====
+    // ===== SERVICE ROLE (bypasses RLS) =====
 
     public function fetchProductById($id)
     {
@@ -81,7 +81,7 @@ class SupabaseService
     {
         try {
             $this->serviceClient->patch("products?id=eq.{$productId}", [
-                'json' => ['stock' => $newStock]
+                'json' => ['stock' => $newStock],
             ]);
             return true;
         } catch (\Exception $e) {
@@ -91,28 +91,26 @@ class SupabaseService
     }
 
     public function createOrder($data)
-{
-    try {
-        $response = $this->serviceClient->post('orders', [
-            'json' => $data,
-            'headers' => ['Prefer' => 'return=representation'],
-        ]);
-        $body = json_decode($response->getBody(), true);
-        \Log::info('Order created OK', ['response' => $body]);
-        return $body[0] ?? $body;
-
-    } catch (\GuzzleHttp\Exception\ClientException $e) {
-        $responseBody = $e->getResponse()->getBody()->getContents();
-        \Log::error('createOrder FAILED (4xx): ' . $responseBody);
-        \Log::error('Payload sent: ' . json_encode($data));
-        return null;
-
-    } catch (\Exception $e) {
-        \Log::error('createOrder FAILED: ' . $e->getMessage());
-        \Log::error('Payload sent: ' . json_encode($data));
-        return null;
+    {
+        try {
+            $response = $this->serviceClient->post('orders', [
+                'json'    => $data,
+                'headers' => ['Prefer' => 'return=representation'],
+            ]);
+            $body = json_decode($response->getBody(), true);
+            Log::info('Order created OK', ['response' => $body]);
+            return $body[0] ?? $body;
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            $responseBody = $e->getResponse()->getBody()->getContents();
+            Log::error('createOrder FAILED (4xx): ' . $responseBody);
+            Log::error('Payload sent: ' . json_encode($data));
+            return null;
+        } catch (\Exception $e) {
+            Log::error('createOrder FAILED: ' . $e->getMessage());
+            Log::error('Payload sent: ' . json_encode($data));
+            return null;
+        }
     }
-}
 
     public function updateOrder($orderId, $data)
     {
@@ -160,7 +158,7 @@ class SupabaseService
         }
     }
 
-        /**
+    /**
      * Fetch ALL products (including inactive) for admin
      */
     public function fetchAllProducts()
@@ -206,7 +204,7 @@ class SupabaseService
         }
     }
 
-        // ===== AUTH METHODS =====
+    // ===== AUTH / PROFILES =====
 
     public function findProfileByEmail($email)
     {
@@ -234,33 +232,11 @@ class SupabaseService
         }
     }
 
-    /**
-     * Expire old unpaid orders (30 min timeout)
-     */
-    public function expireUnpaidOrders()
-    {
-        try {
-            $cutoff = now()->subMinutes(30)->toIso8601String();
-            $response = $this->serviceClient->patch(
-                "orders?payment_status=eq.unpaid&status=eq.pending&created_at=lt.{$cutoff}",
-                ['json' => [
-                    'status' => 'cancelled',
-                    'payment_status' => 'failed',
-                    'updated_at' => now()->toIso8601String(),
-                ]]
-            );
-            return json_decode($response->getBody(), true);
-        } catch (\Exception $e) {
-            Log::error('expireUnpaidOrders: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-        public function createProfile($data)
+    public function createProfile($data)
     {
         try {
             $response = $this->serviceClient->post('profiles', [
-                'json' => $data,
+                'json'    => $data,
                 'headers' => ['Prefer' => 'return=representation'],
             ]);
             $body = json_decode($response->getBody(), true);
@@ -268,6 +244,22 @@ class SupabaseService
         } catch (\Exception $e) {
             Log::error('createProfile: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    /**
+     * Update a profile (partial update) — used by password reset
+     */
+    public function updateProfile($profileId, $data)
+    {
+        try {
+            $this->serviceClient->patch("profiles?id=eq.{$profileId}", [
+                'json' => $data,
+            ]);
+            return true;
+        } catch (\Exception $e) {
+            Log::error('updateProfile: ' . $e->getMessage());
+            return false;
         }
     }
 
@@ -284,4 +276,30 @@ class SupabaseService
         }
     }
 
+    /**
+     * Expire old unpaid orders (30 min timeout)
+     *
+     * Timestamps use Z-suffix ISO 8601 (UTC) because PostgREST URL-decodes
+     * "+" as a space, which PostgreSQL then rejects as an invalid timestamp.
+     */
+    public function expireUnpaidOrders()
+    {
+        try {
+            $cutoff = now()->utc()->format('Y-m-d\TH:i:s\Z');
+            $now    = now()->utc()->format('Y-m-d\TH:i:s\Z');
+
+            $response = $this->serviceClient->patch(
+                "orders?payment_status=eq.unpaid&status=eq.pending&created_at=lt.{$cutoff}",
+                ['json' => [
+                    'status'         => 'cancelled',
+                    'payment_status' => 'failed',
+                    'updated_at'     => $now,
+                ]]
+            );
+            return json_decode($response->getBody(), true);
+        } catch (\Exception $e) {
+            Log::error('expireUnpaidOrders: ' . $e->getMessage());
+            return [];
+        }
+    }
 }

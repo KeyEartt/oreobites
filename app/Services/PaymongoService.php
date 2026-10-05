@@ -7,102 +7,145 @@ use Illuminate\Support\Facades\Log;
 
 class PaymongoService
 {
-    protected $secretKey;
-    protected $apiUrl;
+    protected string $secretKey;
+    protected string $apiUrl;
 
     public function __construct()
     {
         $this->secretKey = config('paymongo.secret_key');
-        $this->apiUrl = config('paymongo.api_url');
+        $this->apiUrl    = rtrim(config('paymongo.api_url', 'https://api.paymongo.com/v1'), '/');
     }
 
     private function client()
     {
         return Http::withBasicAuth($this->secretKey, '')
             ->baseUrl($this->apiUrl)
-            ->withOptions(['verify' => false])
+            ->withOptions(['verify' => false]) // Windows SSL; safe to leave on prod too
             ->acceptJson()
-            ->contentType('application/json');
+            ->contentType('application/json')
+            ->timeout(30);
     }
 
-    public function createPaymentIntent($amountInCentavos, $description)
+    /**
+     * Returns full response JSON: ['data' => [...]] or null on failure.
+     */
+    public function createPaymentIntent(int $amountInCentavos, string $description): ?array
     {
         $response = $this->client()->post('/payment_intents', [
             'data' => [
                 'attributes' => [
-                    'amount' => $amountInCentavos,
-                    'currency' => 'PHP',
-                    'payment_method_allowed' => ['gcash'],
-                    'description' => $description,
+                    'amount'                 => $amountInCentavos,
+                    'currency'               => 'PHP',
+                    'payment_method_allowed' => ['qrph'],
+                    'description'            => $description,
+                    'capture_type'           => 'automatic',
                 ],
             ],
         ]);
 
         if ($response->failed()) {
-            Log::error('PayMongo createPaymentIntent failed: ' . $response->body());
+            Log::error('PayMongo createPaymentIntent failed', [
+                'status' => $response->status(),
+                'body'   => $response->json(),
+            ]);
             return null;
         }
-
         return $response->json();
     }
 
-    public function createPaymentMethod()
+    public function createPaymentMethod(): ?array
     {
         $response = $this->client()->post('/payment_methods', [
-            'data' => ['attributes' => ['type' => 'gcash']],
+            'data' => [
+                'attributes' => [
+                    'type' => 'qrph',
+                ],
+            ],
         ]);
 
         if ($response->failed()) {
-            Log::error('PayMongo createPaymentMethod failed: ' . $response->body());
+            Log::error('PayMongo createPaymentMethod failed', [
+                'status' => $response->status(),
+                'body'   => $response->json(),
+            ]);
             return null;
         }
-
         return $response->json();
     }
 
-    public function attachPaymentMethod($paymentIntentId, $paymentMethodId, $returnUrl)
+    /**
+     * Attaches PM to PI. Returns full response; caller reads
+     * data.attributes.next_action.code.image_url
+     */
+    public function attachPaymentMethod(string $paymentIntentId, string $paymentMethodId): ?array
     {
         $response = $this->client()->post("/payment_intents/{$paymentIntentId}/attach", [
             'data' => [
                 'attributes' => [
                     'payment_method' => $paymentMethodId,
-                    'return_url' => $returnUrl,
                 ],
             ],
         ]);
 
         if ($response->failed()) {
-            Log::error('PayMongo attachPaymentMethod failed: ' . $response->body());
+            Log::error('PayMongo attachPaymentMethod failed', [
+                'pi'     => $paymentIntentId,
+                'pm'     => $paymentMethodId,
+                'status' => $response->status(),
+                'body'   => $response->json(),
+            ]);
             return null;
         }
+        return $response->json();
+    }
 
+    public function getPaymentIntent(string $paymentIntentId): ?array
+    {
+        $response = $this->client()->get("/payment_intents/{$paymentIntentId}");
+        if ($response->failed()) {
+            Log::error('PayMongo getPaymentIntent failed', [
+                'pi'     => $paymentIntentId,
+                'status' => $response->status(),
+                'body'   => $response->json(),
+            ]);
+            return null;
+        }
         return $response->json();
     }
 
     /**
-     * 🔥 NEW: Fetch current Payment Intent status from PayMongo
+     * PayMongo header format: t=<ts>,te=<hmac>,li=<hmac>
+     * Signed payload: "<timestamp>.<rawBody>"
      */
-    public function getPaymentIntent($paymentIntentId)
-    {
-        $response = $this->client()->get("/payment_intents/{$paymentIntentId}");
-
-        if ($response->failed()) {
-            Log::error('PayMongo getPaymentIntent failed: ' . $response->body());
-            return null;
-        }
-
-        return $response->json();
-    }
-
-    public function verifyWebhookSignature($rawBody, $signatureHeader)
+    public function verifyWebhookSignature(string $rawBody, ?string $signatureHeader): bool
     {
         $secret = config('paymongo.webhook_secret');
-
         if (!$secret || !$signatureHeader) {
             return false;
         }
 
-        $computed = hash_hmac('sha256', $rawBody, $secret);
-        return hash_equals($computed, $signatureHeader);
+        $parts = [];
+        foreach (explode(',', $signatureHeader) as $pair) {
+            $kv = explode('=', $pair, 2);
+            if (count($kv) === 2) {
+                $parts[trim($kv[0])] = trim($kv[1]);
+            }
+        }
+
+        $timestamp = $parts['t']  ?? null;
+        $candidates = array_filter([$parts['te'] ?? null, $parts['li'] ?? null]);
+
+        if (!$timestamp || empty($candidates)) {
+            return false;
+        }
+
+        $computed = hash_hmac('sha256', $timestamp . '.' . $rawBody, $secret);
+
+        foreach ($candidates as $sig) {
+            if (hash_equals($computed, $sig)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
