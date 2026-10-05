@@ -102,10 +102,10 @@
                             @foreach($order['items'] as $item)
                                 <li class="flex items-center justify-between text-sm">
                                     <span class="text-cookie-brown">
-                                        <span class="font-semibold text-oreo-noir">{{ $item['quantity'] }}×</span>
-                                        {{ $item['name'] }}
+                                        <span class="font-semibold text-oreo-noir">{{ $item['quantity'] ?? 1 }}×</span>
+                                        {{ $item['name'] ?? 'Item' }}
                                     </span>
-                                    <span class="text-oreo-noir font-medium">₱{{ $item['price'] * $item['quantity'] }}</span>
+                                    <span class="text-oreo-noir font-medium">₱{{ ($item['price'] ?? 0) * ($item['quantity'] ?? 1) }}</span>
                                 </li>
                             @endforeach
                         </ul>
