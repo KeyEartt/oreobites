@@ -12,56 +12,219 @@
             </div>
             <div>
                 <h1 class="font-display font-extrabold text-xl md:text-2xl text-oreo-noir">Admin Dashboard</h1>
-                <p class="text-xs text-stone-500 mt-0.5">Manage products and monitor orders</p>
+                <p class="text-xs text-stone-500 mt-0.5">Business health, products, and orders</p>
             </div>
         </div>
     </div>
 </section>
+
+{{-- ============ KPI SECTION ============ --}}
 
 <section class="container-app py-5 md:py-6">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="rounded-2xl bg-gradient-to-br from-chocolate to-cookie-brown text-milk-cream p-5 md:p-6 shadow-card relative overflow-hidden">
+    <h2 class="font-display font-bold text-sm uppercase tracking-wider text-cookie-brown mb-3">Revenue</h2>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div class="rounded-2xl bg-gradient-to-br from-chocolate to-cookie-brown text-milk-cream p-4 md:p-5 shadow-card relative overflow-hidden">
             <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-golden/15 blur-2xl"></div>
             <div class="relative">
-                <div class="flex items-center justify-between">
-                    <p class="text-xs uppercase tracking-wider font-bold text-golden">Total Revenue</p>
-                    <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                        <x-icon name="credit-card" class="w-4 h-4 text-golden" />
-                    </div>
-                </div>
-                <p class="font-display font-extrabold text-3xl md:text-4xl mt-3">₱{{ number_format($totalRevenue, 2) }}</p>
-                <p class="text-xs text-milk-cream/70 mt-1.5">From {{ $paidOrders }} paid order{{ $paidOrders !== 1 ? 's' : '' }}</p>
+                <p class="text-[10px] md:text-xs uppercase tracking-wider font-bold text-golden">Today</p>
+                <p class="font-display font-extrabold text-2xl md:text-3xl mt-2">₱{{ number_format($revenueToday) }}</p>
             </div>
         </div>
 
-        <div class="rounded-2xl bg-oreo-noir text-milk-cream p-5 md:p-6 shadow-card relative overflow-hidden">
+        <div class="rounded-2xl bg-oreo-noir text-milk-cream p-4 md:p-5 shadow-card relative overflow-hidden">
             <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-golden/15 blur-2xl"></div>
             <div class="relative">
-                <div class="flex items-center justify-between">
-                    <p class="text-xs uppercase tracking-wider font-bold text-golden">Total Orders</p>
-                    <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                        <x-icon name="orders" class="w-4 h-4 text-golden" />
-                    </div>
-                </div>
-                <p class="font-display font-extrabold text-3xl md:text-4xl mt-3">{{ $totalOrders }}</p>
-                <p class="text-xs text-milk-cream/70 mt-1.5">All time</p>
+                <p class="text-[10px] md:text-xs uppercase tracking-wider font-bold text-golden">Last 7 days</p>
+                <p class="font-display font-extrabold text-2xl md:text-3xl mt-2">₱{{ number_format($revenue7d) }}</p>
             </div>
         </div>
 
-        <div class="rounded-2xl bg-white border border-stone-200 p-5 md:p-6 shadow-soft">
-            <div class="flex items-center justify-between">
-                <p class="text-xs uppercase tracking-wider font-bold text-cookie-brown">Products</p>
-                <div class="w-8 h-8 rounded-full bg-milk-cream flex items-center justify-center text-cookie-brown shrink-0">
-                    <x-icon name="cookie" class="w-4 h-4" />
-                </div>
-            </div>
-            <p class="font-display font-extrabold text-3xl md:text-4xl mt-3 text-oreo-noir">{{ count($products) }}</p>
-            <p class="text-xs text-stone-500 mt-1.5">
-                {{ collect($products)->where('is_active', true)->count() }} active · {{ collect($products)->where('is_active', false)->count() }} hidden
-            </p>
+        <div class="rounded-2xl bg-white border border-stone-200 p-4 md:p-5 shadow-soft">
+            <p class="text-[10px] md:text-xs uppercase tracking-wider font-bold text-cookie-brown">Last 30 days</p>
+            <p class="font-display font-extrabold text-2xl md:text-3xl mt-2 text-oreo-noir">₱{{ number_format($revenue30d) }}</p>
+        </div>
+
+        <div class="rounded-2xl bg-white border border-stone-200 p-4 md:p-5 shadow-soft">
+            <p class="text-[10px] md:text-xs uppercase tracking-wider font-bold text-cookie-brown">All time</p>
+            <p class="font-display font-extrabold text-2xl md:text-3xl mt-2 text-oreo-noir">₱{{ number_format($revenueAll) }}</p>
+            <p class="text-[11px] text-stone-500 mt-1">{{ $paidOrdersCount }} paid order{{ $paidOrdersCount !== 1 ? 's' : '' }}</p>
         </div>
     </div>
 </section>
+
+{{-- Order funnel --}}
+<section class="container-app pb-5 md:pb-6">
+    <div class="card p-5 md:p-6">
+        <div class="flex items-center justify-between mb-5">
+            <div>
+                <h2 class="font-display font-bold text-oreo-noir">Order Funnel</h2>
+                <p class="text-xs text-stone-500 mt-0.5">Where every order currently sits</p>
+            </div>
+            <span class="badge badge-neutral">{{ $totalOrders }} total</span>
+        </div>
+
+        @php
+            $maxFunnel = max($funnel) ?: 1;
+            $funnelStages = [
+                'pending'   => ['label' => 'Pending Payment', 'color' => 'bg-amber-400'],
+                'paid'      => ['label' => 'Paid',            'color' => 'bg-blue-500'],
+                'preparing' => ['label' => 'Preparing',       'color' => 'bg-chocolate'],
+                'ready'     => ['label' => 'Ready',           'color' => 'bg-green-500'],
+                'picked_up' => ['label' => 'Picked Up',       'color' => 'bg-stone-400'],
+                'cancelled' => ['label' => 'Cancelled',       'color' => 'bg-red-500'],
+            ];
+        @endphp
+
+        <div class="space-y-3">
+            @foreach($funnelStages as $key => $meta)
+                @php
+                    $count = $funnel[$key];
+                    $pct   = $maxFunnel > 0 ? ($count / $maxFunnel) * 100 : 0;
+                @endphp
+                <div class="flex items-center gap-3">
+                    <span class="w-28 md:w-32 text-xs font-medium text-cookie-brown shrink-0">{{ $meta['label'] }}</span>
+                    <div class="flex-1 bg-milk-cream rounded-full h-6 overflow-hidden min-w-0">
+                        <div class="{{ $meta['color'] }} h-full rounded-full transition-all duration-500"
+                             style="width: {{ $count > 0 ? max($pct, 2) : 0 }}%"></div>
+                    </div>
+                    <span class="w-10 text-right text-sm font-bold text-oreo-noir shrink-0">{{ $count }}</span>
+                </div>
+            @endforeach
+        </div>
+    </div>
+</section>
+
+{{-- Top products + Peak hours --}}
+<section class="container-app pb-5 md:pb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
+
+        {{-- Top products --}}
+        <div class="card p-5 md:p-6">
+            <div class="flex items-center justify-between mb-5">
+                <div>
+                    <h2 class="font-display font-bold text-oreo-noir">Top Products</h2>
+                    <p class="text-xs text-stone-500 mt-0.5">Revenue, last 30 days</p>
+                </div>
+            </div>
+
+            @if(empty($topProducts))
+                <div class="text-center py-10">
+                    <div class="w-12 h-12 mx-auto rounded-full bg-milk-cream flex items-center justify-center text-cookie-brown">
+                        <x-icon name="cookie" class="w-5 h-5" />
+                    </div>
+                    <p class="text-sm text-stone-500 mt-3">No sales data yet</p>
+                </div>
+            @else
+                <div class="space-y-3">
+                    @php $maxRevenue = max(array_column($topProducts, 'revenue')) ?: 1; @endphp
+                    @foreach($topProducts as $i => $p)
+                        @php $pct = ($p['revenue'] / $maxRevenue) * 100; @endphp
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-sm font-medium text-oreo-noir truncate pr-2">
+                                    <span class="text-xs text-stone-400 font-mono mr-1.5">#{{ $i + 1 }}</span>
+                                    {{ $p['name'] }}
+                                </span>
+                                <span class="text-sm font-bold text-chocolate shrink-0">₱{{ number_format($p['revenue']) }}</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 bg-milk-cream rounded-full h-1.5 overflow-hidden">
+                                    <div class="bg-chocolate h-full rounded-full" style="width: {{ $pct }}%"></div>
+                                </div>
+                                <span class="text-xs text-stone-500 shrink-0 w-16 text-right">{{ $p['qty'] }} sold</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        {{-- Peak hours --}}
+        <div class="card p-5 md:p-6">
+            <div class="flex items-center justify-between mb-5">
+                <div>
+                    <h2 class="font-display font-bold text-oreo-noir">Peak Hours</h2>
+                    <p class="text-xs text-stone-500 mt-0.5">Orders by hour, last 30 days (PHT)</p>
+                </div>
+            </div>
+
+            @php
+                $maxHour = max($hourCounts) ?: 1;
+                $total30 = array_sum($hourCounts);
+            @endphp
+
+            @if($total30 === 0)
+                <div class="text-center py-10">
+                    <div class="w-12 h-12 mx-auto rounded-full bg-milk-cream flex items-center justify-center text-cookie-brown">
+                        <x-icon name="clock" class="w-5 h-5" />
+                    </div>
+                    <p class="text-sm text-stone-500 mt-3">No orders in the last 30 days</p>
+                </div>
+            @else
+                <div class="flex items-end gap-0.5 md:gap-1 h-32">
+                    @for($h = 0; $h < 24; $h++)
+                        @php
+                            $count  = $hourCounts[$h];
+                            $height = $count > 0 ? max(($count / $maxHour) * 100, 8) : 0;
+                        @endphp
+                        <div class="flex-1 h-full flex flex-col justify-end group relative">
+                            <div class="w-full bg-chocolate/80 hover:bg-chocolate rounded-t transition-all"
+                                 style="height: {{ $height }}%"
+                                 title="{{ $count }} order{{ $count !== 1 ? 's' : '' }} at {{ str_pad($h, 2, '0', STR_PAD_LEFT) }}:00"></div>
+                        </div>
+                    @endfor
+                </div>
+                <div class="flex justify-between text-[10px] text-stone-400 mt-2 font-mono">
+                    <span>00</span>
+                    <span>06</span>
+                    <span>12</span>
+                    <span>18</span>
+                    <span>23</span>
+                </div>
+            @endif
+        </div>
+    </div>
+</section>
+
+{{-- Conversion metrics --}}
+<section class="container-app pb-5 md:pb-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+        <div class="card p-5 md:p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-600 shrink-0">
+                    <x-icon name="close" class="w-5 h-5" stroke-width="2" />
+                </div>
+                <div>
+                    <h3 class="font-display font-bold text-oreo-noir">Cancellation Rate</h3>
+                    <p class="text-xs text-stone-500">Last 30 days</p>
+                </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+                <p class="font-display font-extrabold text-4xl text-oreo-noir">{{ $cancellationRate }}%</p>
+                <p class="text-sm text-stone-500">{{ $cancelled30d }} of {{ $orders30dCount }}</p>
+            </div>
+        </div>
+
+        <div class="card p-5 md:p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 shrink-0">
+                    <x-icon name="orders" class="w-5 h-5" stroke-width="2" />
+                </div>
+                <div>
+                    <h3 class="font-display font-bold text-oreo-noir">Repeat Customers</h3>
+                    <p class="text-xs text-stone-500">All time</p>
+                </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+                <p class="font-display font-extrabold text-4xl text-oreo-noir">{{ $repeatRate }}%</p>
+                <p class="text-sm text-stone-500">{{ $repeatEmails }} of {{ $uniqueEmails }} customers</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{{-- ============ MANAGE SECTION (existing tabs) ============ --}}
 
 <section class="container-app pb-16">
     <div class="card overflow-hidden">
@@ -83,7 +246,6 @@
 
         {{-- Products Panel --}}
         <div id="panelProducts" class="p-4 md:p-6">
-            {{-- Mobile scroll hint --}}
             <div class="md:hidden flex items-center gap-2 mb-3 text-xs text-stone-500">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3.5 h-3.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/>
@@ -183,10 +345,11 @@
                         @forelse($orders as $order)
                             @php
                                 $payBadge = match($order['payment_status']) {
-                                    'paid' => 'badge-success',
+                                    'paid'   => 'badge-success',
                                     'failed' => 'badge-danger',
-                                    default => 'badge-warning',
+                                    default  => 'badge-warning',
                                 };
+                                $itemsQty = collect($order['items'] ?? [])->sum('quantity');
                             @endphp
                             <tr class="text-sm hover:bg-milk-cream/30 transition-colors">
                                 <td class="py-3 pr-4">
@@ -201,7 +364,7 @@
                                 </td>
                                 <td class="py-3 pr-4">
                                     <span class="text-xs text-stone-600 whitespace-nowrap">
-                                        {{ collect($order['items'])->sum('quantity') }} item{{ collect($order['items'])->sum('quantity') !== 1 ? 's' : '' }}
+                                        {{ $itemsQty }} item{{ $itemsQty !== 1 ? 's' : '' }}
                                     </span>
                                 </td>
                                 <td class="py-3 pr-4">
@@ -214,7 +377,7 @@
                                     <span class="badge badge-neutral whitespace-nowrap">{{ str_replace('_', ' ', $order['status']) }}</span>
                                 </td>
                                 <td class="py-3 text-right text-xs text-stone-500 whitespace-nowrap">
-                                    {{ \Carbon\Carbon::parse($order['created_at'])->format('M d, g:i A') }}
+                                    {{ \Carbon\Carbon::parse($order['created_at'])->timezone('Asia/Manila')->format('M d, g:i A') }}
                                 </td>
                             </tr>
                         @empty
