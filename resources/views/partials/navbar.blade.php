@@ -245,10 +245,17 @@
                 <span class="text-sm text-stone-500">Subtotal</span>
                 <span id="cartTotal" class="font-display font-bold text-2xl text-oreo-noir">₱0</span>
             </div>
-            <a href="/checkout" class="btn-primary w-full">
-                Checkout
-                <x-icon name="arrow-right" class="w-4 h-4" />
-            </a>
+            @if(session('auth_user'))
+    <a href="/checkout" class="btn-primary w-full">
+        Checkout
+        <x-icon name="arrow-right" class="w-4 h-4" />
+    </a>
+@else
+    <a href="/login" class="btn-primary w-full">
+        <x-icon name="login" class="w-4 h-4" />
+        Log in to Checkout
+    </a>
+@endif
             <button type="button" id="cartContinue"
                     class="w-full text-center text-xs text-stone-500 hover:text-cookie-brown mt-3 font-medium">
                 Continue shopping

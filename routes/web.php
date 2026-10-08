@@ -19,7 +19,6 @@ use App\Services\SupabaseService;
 // ===== Public =====
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/menu', [MenuController::class, 'index'])->name('menu');
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
 Route::get('/success', [CheckoutController::class, 'success'])->name('success');
 Route::get('/track', [TrackingController::class, 'index'])->name('track');
 
@@ -67,8 +66,9 @@ Route::post('/api/create-payment', [PaymentController::class, 'create']);
 Route::post('/api/webhook', [WebhookController::class, 'handle']);
 Route::post('/api/track-order', [TrackingController::class, 'lookup']);
 
-// ===== Customer (auth required) =====
+// ===== Authenticated users =====
 Route::middleware(['require.customer'])->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
     Route::get('/my-orders', [CustomerController::class, 'myOrders'])->name('my-orders');
 });
 

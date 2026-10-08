@@ -7,6 +7,7 @@ use App\Services\PaymongoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
 
 class PaymentController extends Controller
 {
@@ -15,6 +16,12 @@ class PaymentController extends Controller
         SupabaseService $supabase,
         PaymongoService $paymongo
     ) {
+        // Gate: only logged-in users can place orders
+        $authUser = Session::get('auth_user');
+        if (!$authUser) {
+            return response()->json(['error' => 'Please log in to place an order.'], 401);
+        }
+
         $validated = $request->validate([
             'items'                => 'required|array|min:1',
             'items.*.product_id'   => 'required|string',
@@ -95,11 +102,15 @@ class PaymentController extends Controller
             return response()->json(['error' => 'QR code generation failed.'], 502);
         }
 
-        // 4. Save order
+        // Test-mode only: PayMongo returns a test_url to simulate payment
+        $testUrl = $attachResponse['data']['attributes']['next_action']['code']['test_url'] ?? null;
+
+        // 4. Save order — linked to the logged-in user
         $orderNumber = 'ORE-' . date('Ymd') . '-' . strtoupper(Str::random(6));
 
         $orderData = [
             'order_number'      => $orderNumber,
+            'user_id'           => $authUser['id'],
             'customer_name'     => $validated['customer_name'],
             'customer_phone'    => $validated['customer_phone'],
             'customer_email'    => $validated['customer_email'],
@@ -125,6 +136,7 @@ class PaymentController extends Controller
         // 5. Return QR + order number. Frontend displays QR and polls.
         return response()->json([
             'qr_image'          => $qrImageUrl,
+            'test_url'          => $testUrl,
             'orderNumber'       => $orderNumber,
             'payment_intent_id' => $paymentIntentId,
         ]);

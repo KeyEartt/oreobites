@@ -101,6 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
 
+            if (response.status === 401) {
+                window.location.href = '/login';
+                return;
+            }
+
             if (!response.ok || data.error) {
                 throw new Error(data.error || 'Payment failed.');
             }
@@ -110,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             localStorage.removeItem('oreo-cart');
-            showQR(data.qr_image, data.orderNumber);
+            showQR(data.qr_image, data.orderNumber, data.test_url);
             startPolling(data.orderNumber);
 
         } catch (err) {
@@ -120,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    function showQR(imageUrl, orderNumber) {
+    function showQR(imageUrl, orderNumber, testUrl) {
         const container = document.getElementById('qr-container');
         const leftCol   = document.getElementById('checkoutFormCol');
         const rightCol  = document.getElementById('checkoutSummaryCol');
@@ -133,6 +138,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="font-display font-bold text-xl text-oreo-noir mb-2">Scan to pay</p>
                 <p class="text-sm text-stone-500 mb-5">Open GCash, Maya, or your bank app and scan the code below.</p>
                 <img src="${imageUrl}" alt="QR Ph payment code" class="mx-auto w-64 h-64 rounded-lg border border-stone-200 bg-white" />
+                ${testUrl ? `
+                    <div class="mt-4">
+                        <a href="${testUrl}" target="_blank"
+                           class="inline-flex items-center gap-2 text-xs font-medium text-cookie-brown hover:text-oreo-noir border border-stone-300 rounded-full px-4 py-2">
+                            Simulate payment (test mode)
+                        </a>
+                    </div>
+                ` : ''}
                 <p class="mt-5 text-sm">Order #: <strong class="font-mono">${orderNumber}</strong></p>
                 <p class="mt-3 text-sm text-stone-500 flex items-center justify-center gap-2">
                     <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
