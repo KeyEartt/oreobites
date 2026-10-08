@@ -16,7 +16,6 @@ class PaymentController extends Controller
         SupabaseService $supabase,
         PaymongoService $paymongo
     ) {
-        // Gate: only logged-in users can place orders
         $authUser = Session::get('auth_user');
         if (!$authUser) {
             return response()->json(['error' => 'Please log in to place an order.'], 401);
@@ -33,7 +32,6 @@ class PaymentController extends Controller
             'delivery_address'     => 'nullable|string',
         ]);
 
-        // 1. Delivery zone — fee taken from DB, never from client
         $zones = $supabase->fetchDeliveryZones();
         $zone  = collect($zones)->firstWhere('type', $validated['delivery_type']);
         if (!$zone) {
@@ -44,7 +42,6 @@ class PaymentController extends Controller
             ? 'Ready immediately'
             : $zone['estimated_minutes'] . ' minutes';
 
-        // 2. Server-side stock check + subtotal + enrich items for storage
         $subtotal      = 0;
         $enrichedItems = [];
 
@@ -66,6 +63,7 @@ class PaymentController extends Controller
                 'product_id' => $product['id'],
                 'name'       => $product['name'],
                 'variant'    => $product['variant'] ?? null,
+                'image_url'  => $product['image_url'] ?? null,
                 'price'      => (int) $product['price'],
                 'quantity'   => (int) $item['quantity'],
                 'line_total' => $lineTotal,
@@ -75,7 +73,6 @@ class PaymentController extends Controller
         $total            = $subtotal + $deliveryFee;
         $amountInCentavos = (int) round($total * 100);
 
-        // 3. PayMongo: PI -> PM -> attach
         $piResponse = $paymongo->createPaymentIntent(
             $amountInCentavos,
             "Oreo Bites order for {$validated['customer_name']}"
@@ -102,10 +99,8 @@ class PaymentController extends Controller
             return response()->json(['error' => 'QR code generation failed.'], 502);
         }
 
-        // Test-mode only: PayMongo returns a test_url to simulate payment
         $testUrl = $attachResponse['data']['attributes']['next_action']['code']['test_url'] ?? null;
 
-        // 4. Save order — linked to the logged-in user
         $orderNumber = 'ORE-' . date('Ymd') . '-' . strtoupper(Str::random(6));
 
         $orderData = [
@@ -133,7 +128,6 @@ class PaymentController extends Controller
             return response()->json(['error' => 'Failed to save order.'], 500);
         }
 
-        // 5. Return QR + order number. Frontend displays QR and polls.
         return response()->json([
             'qr_image'          => $qrImageUrl,
             'test_url'          => $testUrl,

@@ -19,36 +19,44 @@ class RegisterController extends Controller
     {
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'password' => 'required|string|min:8|confirmed',
+            'email'     => 'required|email|max:255',
+            'password'  => [
+                'required', 'string', 'min:8', 'confirmed',
+                'regex:/[A-Z]/', 'regex:/[a-z]/', 'regex:/[0-9]/', 'regex:/[^A-Za-z0-9]/',
+            ],
+        ], [
+            'password.regex' => 'Password must include uppercase, lowercase, a number, and a symbol.',
         ]);
 
-        // Check if email exists
         $existing = $supabase->findProfileByEmail($validated['email']);
         if ($existing) {
             return back()->withErrors(['email' => 'This email is already registered.'])->withInput();
         }
 
-        // Create profile with customer role
         $created = $supabase->createProfile([
-            'email' => $validated['email'],
+            'email'         => $validated['email'],
             'password_hash' => Hash::make($validated['password']),
-            'full_name' => $validated['full_name'],
-            'role' => 'customer',
-            'is_active' => true,
+            'full_name'     => $validated['full_name'],
+            'role'          => 'customer',
+            'is_active'     => true,
         ]);
 
         if (!$created) {
             return back()->withErrors(['email' => 'Registration failed. Please try again.'])->withInput();
         }
 
-        // Auto-login
         Session::put('auth_user', [
-            'id' => $created['id'],
-            'email' => $created['email'],
+            'id'        => $created['id'],
+            'email'     => $created['email'],
             'full_name' => $created['full_name'],
-            'role' => $created['role'],
+            'role'      => $created['role'],
         ]);
+
+        // Same intent-redirect logic
+        $intended = Session::pull('url.intended');
+        if ($intended) {
+            return redirect($intended)->with('success', 'Welcome to Oreo Bites!');
+        }
 
         return redirect('/my-orders')->with('success', 'Welcome to Oreo Bites!');
     }

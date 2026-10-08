@@ -20,27 +20,22 @@ class PaymongoService
     {
         return Http::withBasicAuth($this->secretKey, '')
             ->baseUrl($this->apiUrl)
-            ->withOptions(['verify' => false]) // Windows SSL; safe to leave on prod too
+            ->withOptions(['verify' => false])
             ->acceptJson()
             ->contentType('application/json')
             ->timeout(30);
     }
 
-    /**
-     * Returns full response JSON: ['data' => [...]] or null on failure.
-     */
-    public function createPaymentIntent(int $amountInCentavos, string $description): ?array
+    public function createPaymentIntent(int $amountCentavos, string $description): ?array
     {
         $response = $this->client()->post('/payment_intents', [
-            'data' => [
-                'attributes' => [
-                    'amount'                 => $amountInCentavos,
-                    'currency'               => 'PHP',
-                    'payment_method_allowed' => ['qrph'],
-                    'description'            => $description,
-                    'capture_type'           => 'automatic',
-                ],
-            ],
+            'data' => ['attributes' => [
+                'amount'                 => $amountCentavos,
+                'currency'               => 'PHP',
+                'payment_method_allowed' => ['qrph'],
+                'description'            => $description,
+                'capture_type'           => 'automatic',
+            ]],
         ]);
 
         if ($response->failed()) {
@@ -56,11 +51,7 @@ class PaymongoService
     public function createPaymentMethod(): ?array
     {
         $response = $this->client()->post('/payment_methods', [
-            'data' => [
-                'attributes' => [
-                    'type' => 'qrph',
-                ],
-            ],
+            'data' => ['attributes' => ['type' => 'qrph']],
         ]);
 
         if ($response->failed()) {
@@ -73,18 +64,12 @@ class PaymongoService
         return $response->json();
     }
 
-    /**
-     * Attaches PM to PI. Returns full response; caller reads
-     * data.attributes.next_action.code.image_url
-     */
     public function attachPaymentMethod(string $paymentIntentId, string $paymentMethodId): ?array
     {
         $response = $this->client()->post("/payment_intents/{$paymentIntentId}/attach", [
-            'data' => [
-                'attributes' => [
-                    'payment_method' => $paymentMethodId,
-                ],
-            ],
+            'data' => ['attributes' => [
+                'payment_method' => $paymentMethodId,
+            ]],
         ]);
 
         if ($response->failed()) {
@@ -116,6 +101,7 @@ class PaymongoService
     /**
      * PayMongo header format: t=<ts>,te=<hmac>,li=<hmac>
      * Signed payload: "<timestamp>.<rawBody>"
+     * Rejects signatures older than 5 minutes (replay protection).
      */
     public function verifyWebhookSignature(string $rawBody, ?string $signatureHeader): bool
     {
@@ -132,10 +118,16 @@ class PaymongoService
             }
         }
 
-        $timestamp = $parts['t']  ?? null;
+        $timestamp  = $parts['t']  ?? null;
         $candidates = array_filter([$parts['te'] ?? null, $parts['li'] ?? null]);
 
         if (!$timestamp || empty($candidates)) {
+            return false;
+        }
+
+        // Replay protection — reject if timestamp is more than 5 minutes old
+        if (abs(time() - (int) $timestamp) > 300) {
+            Log::warning('PayMongo webhook timestamp out of tolerance', ['t' => $timestamp]);
             return false;
         }
 

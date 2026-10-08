@@ -2,14 +2,12 @@
     $user = session('auth_user');
     $currentPath = trim(request()->path(), '/');
 
-    // Active state helper: exact match or nested path
     $isActive = function ($target) use ($currentPath) {
         $target = trim($target, '/');
         if ($target === '') return $currentPath === '';
         return $currentPath === $target || str_starts_with($currentPath, $target . '/');
     };
 
-    // Link class helper — active gets a distinct look + underline
     $linkClass = function ($target) use ($isActive) {
         $base = 'relative px-3 py-2 rounded-lg text-sm font-medium transition-colors';
         return $isActive($target)
@@ -125,86 +123,88 @@
                 </button>
             </div>
         </div>
+    </nav>
 
-        {{-- Mobile Menu --}}
-        <div id="mobileMenu" class="md:hidden hidden border-t border-stone-200 py-3">
-            <div class="space-y-1">
-                <a href="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                    {{ $isActive('') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
-                    <x-icon name="home" class="w-4 h-4" /> Home
-                    @if($isActive(''))
-                        <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
-                    @endif
-                </a>
-                <a href="/menu" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                    {{ $isActive('/menu') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
-                    <x-icon name="menu-bag" class="w-4 h-4" /> Menu
-                    @if($isActive('/menu'))
-                        <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
-                    @endif
-                </a>
-                <a href="/track" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                    {{ $isActive('/track') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
-                    <x-icon name="track" class="w-4 h-4" /> Track Order
-                    @if($isActive('/track'))
-                        <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
-                    @endif
-                </a>
+    {{-- Mobile Menu — OVERLAY, positioned absolutely so it doesn't push content --}}
+    <div id="mobileMenu"
+         class="md:hidden hidden absolute top-full left-0 right-0 bg-white border-t border-stone-200 shadow-lg
+                max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <div class="container-app py-4 space-y-1">
+            <a href="/" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                {{ $isActive('') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
+                <x-icon name="home" class="w-4 h-4" /> Home
+                @if($isActive(''))
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
+                @endif
+            </a>
+            <a href="/menu" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                {{ $isActive('/menu') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
+                <x-icon name="menu-bag" class="w-4 h-4" /> Menu
+                @if($isActive('/menu'))
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
+                @endif
+            </a>
+            <a href="/track" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                {{ $isActive('/track') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
+                <x-icon name="track" class="w-4 h-4" /> Track Order
+                @if($isActive('/track'))
+                    <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
+                @endif
+            </a>
 
-                @if($user)
-                    @if($user['role'] === 'customer')
-                        <a href="/my-orders" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                            {{ $isActive('/my-orders') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
-                            <x-icon name="orders" class="w-4 h-4" /> My Orders
-                            @if($isActive('/my-orders'))
-                                <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
-                            @endif
-                        </a>
-                    @endif
-                    @if(in_array($user['role'], ['staff', 'admin']))
-                        <a href="/staff" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                            {{ $isActive('/staff') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
-                            <x-icon name="staff" class="w-4 h-4" /> Staff
-                            @if($isActive('/staff'))
-                                <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
-                            @endif
-                        </a>
-                    @endif
-                    @if($user['role'] === 'admin')
-                        <a href="/admin" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                            {{ $isActive('/admin') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
-                            <x-icon name="admin" class="w-4 h-4" /> Admin
-                            @if($isActive('/admin'))
-                                <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
-                            @endif
-                        </a>
-                    @endif
-
-                    <div class="pt-2 mt-2 border-t border-stone-200 flex items-center justify-between px-3">
-                        <div class="flex items-center gap-2">
-                            <div class="w-7 h-7 rounded-full bg-oreo-noir text-milk-cream flex items-center justify-center text-xs font-bold">
-                                {{ strtoupper(substr($user['full_name'], 0, 1)) }}
-                            </div>
-                            <span class="text-sm font-medium text-cookie-brown">{{ $user['full_name'] }}</span>
-                        </div>
-                        <form method="POST" action="/logout">
-                            @csrf
-                            <button type="submit" class="flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-800">
-                                <x-icon name="logout" class="w-4 h-4" /> Logout
-                            </button>
-                        </form>
-                    </div>
-                @else
-                    <a href="/login" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-cookie-brown hover:bg-milk-cream transition-colors">
-                        <x-icon name="login" class="w-4 h-4" /> Login
+            @if($user)
+                @if($user['role'] === 'customer')
+                    <a href="/my-orders" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                        {{ $isActive('/my-orders') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
+                        <x-icon name="orders" class="w-4 h-4" /> My Orders
+                        @if($isActive('/my-orders'))
+                            <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
+                        @endif
                     </a>
                 @endif
-            </div>
+                @if(in_array($user['role'], ['staff', 'admin']))
+                    <a href="/staff" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                        {{ $isActive('/staff') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
+                        <x-icon name="staff" class="w-4 h-4" /> Staff
+                        @if($isActive('/staff'))
+                            <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
+                        @endif
+                    </a>
+                @endif
+                @if($user['role'] === 'admin')
+                    <a href="/admin" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                        {{ $isActive('/admin') ? 'bg-milk-cream text-oreo-noir' : 'text-cookie-brown hover:bg-milk-cream' }}">
+                        <x-icon name="admin" class="w-4 h-4" /> Admin
+                        @if($isActive('/admin'))
+                            <span class="ml-auto w-1.5 h-1.5 rounded-full bg-golden"></span>
+                        @endif
+                    </a>
+                @endif
+
+                <div class="pt-3 mt-3 border-t border-stone-200 flex items-center justify-between px-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-oreo-noir text-milk-cream flex items-center justify-center text-xs font-bold">
+                            {{ strtoupper(substr($user['full_name'], 0, 1)) }}
+                        </div>
+                        <span class="text-sm font-medium text-cookie-brown">{{ $user['full_name'] }}</span>
+                    </div>
+                    <form method="POST" action="/logout">
+                        @csrf
+                        <button type="submit" class="flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-800">
+                            <x-icon name="logout" class="w-4 h-4" /> Logout
+                        </button>
+                    </form>
+                </div>
+            @else
+                <a href="/login" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-cookie-brown hover:bg-milk-cream transition-colors">
+                    <x-icon name="login" class="w-4 h-4" /> Login
+                </a>
+            @endif
         </div>
-    </nav>
+    </div>
 </header>
 
-{{-- Cart Drawer (unchanged structure, brand colors updated) --}}
+{{-- Cart Drawer --}}
 <div id="cartDrawer" class="fixed inset-0 z-50 hidden">
     <div id="cartOverlay" class="absolute inset-0 bg-oreo-noir/40 opacity-0 transition-opacity"></div>
 
@@ -246,18 +246,19 @@
                 <span id="cartTotal" class="font-display font-bold text-2xl text-oreo-noir">₱0</span>
             </div>
             @if(session('auth_user'))
-    <a href="/checkout" class="btn-primary w-full">
-        Checkout
-        <x-icon name="arrow-right" class="w-4 h-4" />
-    </a>
-@else
-    <a href="/login" class="btn-primary w-full">
-        <x-icon name="login" class="w-4 h-4" />
-        Log in to Checkout
-    </a>
-@endif
-            <button type="button" id="cartContinue"
-                    class="w-full text-center text-xs text-stone-500 hover:text-cookie-brown mt-3 font-medium">
+                <a href="/checkout" class="btn-primary w-full">
+                    Checkout
+                    <x-icon name="arrow-right" class="w-4 h-4" />
+                </a>
+            @else
+                <a href="/login" class="btn-primary w-full">
+                    <x-icon name="login" class="w-4 h-4" />
+                    Log in to Checkout
+                </a>
+            @endif
+                        <button type="button" id="cartContinue"
+                    class="w-full inline-flex items-center justify-center gap-1.5 text-xs text-cookie-brown hover:text-oreo-noir mt-3 py-2 font-medium transition-colors">
+                <x-icon name="arrow-right" class="w-3 h-3 rotate-180" />
                 Continue shopping
             </button>
         </footer>
@@ -274,10 +275,12 @@
 
     if (mobileToggle && mobileMenu) {
         mobileToggle.addEventListener('click', () => {
-            const open = !mobileMenu.classList.contains('hidden');
-            mobileMenu.classList.toggle('hidden');
-            iconOpen.classList.toggle('hidden', open);
-            iconClose.classList.toggle('hidden', !open);
+            // classList.toggle returns true if the class IS NOW present
+            const isHiddenAfter = mobileMenu.classList.toggle('hidden');
+            const isVisible = !isHiddenAfter;
+
+            iconOpen.classList.toggle('hidden', isVisible);
+            iconClose.classList.toggle('hidden', !isVisible);
         });
     }
 

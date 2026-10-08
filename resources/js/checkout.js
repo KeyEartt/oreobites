@@ -1,5 +1,7 @@
 import { getCart } from './cart.js';
 
+let activePoll = null;
+
 document.addEventListener('DOMContentLoaded', () => {
     const cart = getCart();
     const summaryEl = document.getElementById('orderSummary');
@@ -44,11 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         eta = type === 'pickup' ? 'Ready immediately' : `~${etaMinutes} minutes`;
 
-        if (type === 'pickup') {
-            addressField.classList.add('hidden');
-        } else {
-            addressField.classList.remove('hidden');
-        }
+        if (type === 'pickup') addressField.classList.add('hidden');
+        else addressField.classList.remove('hidden');
 
         subtotalEl.textContent = `₱${subtotal}`;
         feeEl.textContent      = deliveryFee === 0 ? 'Free' : `₱${deliveryFee}`;
@@ -80,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (deliveryType !== 'pickup' && !address) return showError('Please enter your delivery address.');
 
         payBtn.disabled = true;
-        payBtn.innerHTML = '⏳ Generating QR…';
+        payBtn.innerHTML = 'Generating QR…';
 
         try {
             const response = await fetch('/api/create-payment', {
@@ -101,18 +100,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
 
-            if (response.status === 401) {
-                window.location.href = '/login';
-                return;
-            }
+            if (response.status === 401) { window.location.href = '/login'; return; }
 
-            if (!response.ok || data.error) {
-                throw new Error(data.error || 'Payment failed.');
-            }
+            if (!response.ok || data.error) throw new Error(data.error || 'Payment failed.');
 
-            if (!data.qr_image || !data.orderNumber) {
-                throw new Error('Payment gateway returned an unexpected response.');
-            }
+            if (!data.qr_image || !data.orderNumber) throw new Error('Payment gateway returned an unexpected response.');
 
             localStorage.removeItem('oreo-cart');
             showQR(data.qr_image, data.orderNumber, data.test_url);
@@ -121,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             showError(err.message || 'Something went wrong. Please try again.');
             payBtn.disabled = false;
-            payBtn.innerHTML = '💳 Pay with GCash';
+            payBtn.innerHTML = ' Pay with GCash';
         }
     });
 
@@ -151,14 +143,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
                     Waiting for payment…
                 </p>
+                <div class="mt-6 pt-6 border-t border-stone-100">
+                    <button type="button" id="cancelQrBtn"
+                            class="text-xs text-stone-500 hover:text-red-600 font-medium inline-flex items-center gap-1.5">
+                        Cancel and edit order
+                    </button>
+                </div>
             </div>
         `;
         container.classList.remove('hidden');
         container.scrollIntoView({ behavior: 'smooth' });
+
+        document.getElementById('cancelQrBtn')?.addEventListener('click', () => {
+            if (activePoll) { clearInterval(activePoll); activePoll = null; }
+            container.innerHTML = '';
+            container.classList.add('hidden');
+            if (leftCol)  leftCol.classList.remove('hidden');
+            if (rightCol) rightCol.classList.remove('hidden');
+            payBtn.disabled = false;
+            payBtn.innerHTML = ' Pay with GCash';
+        });
     }
 
     function startPolling(orderNumber) {
-        const poll = setInterval(async () => {
+        if (activePoll) clearInterval(activePoll);
+        activePoll = setInterval(async () => {
             try {
                 const r = await fetch(`/api/order/${encodeURIComponent(orderNumber)}`, {
                     headers: { 'Accept': 'application/json' },
@@ -167,7 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const order = await r.json();
                 const status = Array.isArray(order) ? order[0]?.payment_status : order?.payment_status;
                 if (status === 'paid') {
-                    clearInterval(poll);
+                    clearInterval(activePoll);
+                    activePoll = null;
                     window.location.href = `/success?order=${encodeURIComponent(orderNumber)}`;
                 }
             } catch (_) { /* transient — keep polling */ }
@@ -178,6 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
         errorEl.textContent = msg;
         errorEl.classList.remove('hidden');
         payBtn.disabled = false;
-        payBtn.innerHTML = '💳 Pay with GCash';
+        payBtn.innerHTML = 'Pay with GCash';
     }
 });

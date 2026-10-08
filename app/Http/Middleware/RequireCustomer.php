@@ -13,6 +13,8 @@ class RequireCustomer
         $user = Session::get('auth_user');
 
         if (!$user) {
+            // Remember where they were trying to go
+            Session::put('url.intended', $request->fullUrl());
             return redirect('/login')->with('error', 'Please log in first.');
         }
 
