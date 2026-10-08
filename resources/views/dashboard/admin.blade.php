@@ -79,7 +79,6 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
         <div class="card p-5">
             <div class="mb-4">
                 <h2 class="font-display font-bold text-oreo-noir">Top Products</h2>
@@ -194,21 +193,30 @@
         <div class="p-4 md:p-5 border-b border-stone-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h2 class="font-display font-bold text-oreo-noir">Products</h2>
-                <p class="text-xs text-stone-500 mt-0.5">Manage stock and visibility</p>
+                <p class="text-xs text-stone-500 mt-0.5">Add, edit, or remove menu items</p>
             </div>
-            <div class="relative w-full sm:w-64">
-                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-4 h-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
-                    </svg>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <div class="relative w-full sm:w-64">
+                    <div class="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+                        </svg>
+                    </div>
+                    <input id="productsSearch" type="search" placeholder="Search products..."
+                           class="w-full bg-white border border-stone-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-chocolate focus:border-transparent outline-none">
                 </div>
-                <input id="productsSearch" type="search" placeholder="Search products..."
-                       class="w-full bg-white border border-stone-300 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-chocolate focus:border-transparent outline-none">
+                <button type="button" onclick="openProductModal()"
+                        class="inline-flex items-center justify-center gap-2 bg-oreo-noir hover:bg-cookie-brown text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                    </svg>
+                    Add Product
+                </button>
             </div>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[640px]">
+            <table class="w-full min-w-[720px]">
                 <thead>
                     <tr class="text-left text-[10px] uppercase tracking-wider text-stone-400 font-bold border-b border-stone-200 bg-milk-cream/30">
                         <th class="px-4 py-3">Product</th>
@@ -221,12 +229,22 @@
                 </thead>
                 <tbody id="productsTbody" class="divide-y divide-stone-100">
                     @foreach($products as $product)
-                        <tr class="product-row text-sm hover:bg-milk-cream/30 transition-colors">
+                        <tr class="product-row text-sm hover:bg-milk-cream/30 transition-colors"
+                            data-product="{{ json_encode([
+                                'id'          => $product['id'],
+                                'name'        => $product['name'],
+                                'variant'     => $product['variant'],
+                                'description' => $product['description'] ?? '',
+                                'price'       => (int) $product['price'],
+                                'stock'       => (int) $product['stock'],
+                                'image_url'   => $product['image_url'] ?? '',
+                                'is_active'   => (bool) $product['is_active'],
+                            ]) }}">
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     @if(!empty($product['image_url']))
-                                        <div class="w-10 h-10 rounded-lg overflow-hidden bg-milk-cream shrink-0">
-                                            <img src="{{ asset($product['image_url']) }}" alt="" class="w-full h-full object-cover">
+                                        <div class="w-10 h-10 rounded-lg overflow-hidden bg-milk-cream shrink-0 border border-stone-200">
+                                            <img src="{{ img_url($product['image_url']) }}" alt="" class="w-full h-full object-cover">
                                         </div>
                                     @else
                                         <div class="w-10 h-10 rounded-lg bg-milk-cream flex items-center justify-center text-cookie-brown shrink-0">
@@ -257,13 +275,29 @@
                                     <span class="badge badge-neutral"><span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>Hidden</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 text-right">
-                                <button type="button"
-                                        onclick="toggleProduct('{{ $product['id'] }}', {{ $product['is_active'] ? 'false' : 'true' }})"
-                                        class="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap
-                                               {{ $product['is_active'] ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50' }}">
-                                    {{ $product['is_active'] ? 'Hide' : 'Show' }}
-                                </button>
+                            <td class="px-4 py-3">
+                                <div class="flex items-center justify-end gap-1">
+                                    <button type="button" onclick="editProductRow(this)"
+                                            class="w-8 h-8 flex items-center justify-center rounded-lg text-cookie-brown hover:bg-milk-cream transition-colors"
+                                            title="Edit">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" onclick="toggleProduct('{{ $product['id'] }}', {{ $product['is_active'] ? 'false' : 'true' }})"
+                                            class="px-2 h-8 rounded-lg text-xs font-medium transition-colors whitespace-nowrap
+                                                   {{ $product['is_active'] ? 'text-stone-600 hover:bg-stone-100' : 'text-green-600 hover:bg-green-50' }}"
+                                            title="{{ $product['is_active'] ? 'Hide' : 'Show' }}">
+                                        {{ $product['is_active'] ? 'Hide' : 'Show' }}
+                                    </button>
+                                    <button type="button" onclick="deleteProductRow('{{ $product['id'] }}')"
+                                            class="w-8 h-8 flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                                            title="Delete">
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/>
+                                        </svg>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     @endforeach
@@ -296,7 +330,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full min-w-[760px]">
+            <table class="w-full min-w-[820px]">
                 <thead>
                     <tr class="text-left text-[10px] uppercase tracking-wider text-stone-400 font-bold border-b border-stone-200 bg-milk-cream/30">
                         <th class="px-4 py-3">Order #</th>
@@ -304,6 +338,7 @@
                         <th class="px-4 py-3">Items</th>
                         <th class="px-4 py-3">Total</th>
                         <th class="px-4 py-3">Payment</th>
+                        <th class="px-4 py-3">Method</th>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3 text-right">Date</th>
                     </tr>
@@ -334,6 +369,7 @@
                                 'eta'              => $order['eta'] ?? null,
                                 'status'           => $order['status'],
                                 'payment_status'   => $order['payment_status'],
+                                'payment_method'   => $order['payment_method'] ?? 'online',
                                 'items'            => $order['items'] ?? [],
                             ]) }}">
                             <td class="px-4 py-3">
@@ -353,6 +389,13 @@
                                 <span class="badge {{ $payBadge }} whitespace-nowrap">{{ strtoupper($order['payment_status']) }}</span>
                             </td>
                             <td class="px-4 py-3">
+                                @if(($order['payment_method'] ?? 'online') === 'in_person')
+                                    <span class="badge bg-amber-100 text-amber-800 whitespace-nowrap">IN PERSON</span>
+                                @else
+                                    <span class="badge badge-neutral whitespace-nowrap">ONLINE</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3">
                                 <span class="badge badge-neutral whitespace-nowrap">{{ str_replace('_', ' ', $order['status']) }}</span>
                             </td>
                             <td class="px-4 py-3 text-right text-xs text-stone-500 whitespace-nowrap">
@@ -361,7 +404,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-16">
+                            <td colspan="8" class="text-center py-16">
                                 <div class="w-14 h-14 mx-auto rounded-full bg-milk-cream flex items-center justify-center text-cookie-brown">
                                     <x-icon name="orders" class="w-6 h-6" />
                                 </div>
@@ -390,6 +433,102 @@
                 </div>
             </div>
             <p id="adminOrdersCounter" class="text-center text-xs text-stone-500 mt-2"></p>
+        </div>
+    </div>
+</div>
+
+{{-- ============ PRODUCT MODAL ============ --}}
+<div id="productModal" class="fixed inset-0 z-[60] hidden">
+    <div id="productModalOverlay" class="absolute inset-0 bg-oreo-noir/60 backdrop-blur-sm"></div>
+    <div class="absolute inset-x-3 top-6 bottom-6 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-2xl md:max-h-[88vh] flex">
+        <div class="bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden w-full max-h-full">
+
+            <div class="px-5 py-4 border-b border-stone-200 flex items-center justify-between gap-3 shrink-0">
+                <p id="productModalTitle" class="font-display font-bold text-oreo-noir">Add Product</p>
+                <button type="button" id="productModalClose"
+                        class="w-9 h-9 flex items-center justify-center rounded-full text-stone-500 hover:bg-milk-cream hover:text-oreo-noir transition-colors shrink-0"
+                        aria-label="Close">
+                    <x-icon name="close" class="w-5 h-5" />
+                </button>
+            </div>
+
+            <form id="productForm" class="flex-1 overflow-y-auto min-h-0 p-5 space-y-4">
+                <input type="hidden" id="productId">
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label for="productName" class="input-label">Name *</label>
+                        <input id="productName" type="text" required maxlength="255" class="input-field" placeholder="Classic Dark Oreo">
+                    </div>
+                    <div>
+                        <label for="productVariant" class="input-label">Variant *</label>
+                        <input id="productVariant" type="text" required maxlength="50" list="variantSuggestions" class="input-field" placeholder="Dark">
+                        <datalist id="variantSuggestions">
+                            <option value="Dark"></option>
+                            <option value="White"></option>
+                            <option value="Box"></option>
+                        </datalist>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="productDescription" class="input-label">Description</label>
+                    <textarea id="productDescription" rows="2" maxlength="1000" class="input-field" placeholder="Crushed Oreo mixed into cream cheese, glazed in rich dark chocolate."></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="productPrice" class="input-label">
+                            Price (₱) *
+                            <span id="priceHint" class="text-xs text-stone-400 font-normal ml-1"></span>
+                        </label>
+                        <input id="productPrice" type="number" required min="0" step="1" class="input-field" placeholder="35">
+                    </div>
+                    <div>
+                        <label for="productStock" class="input-label">
+                            Stock *
+                            <span id="stockHint" class="text-xs text-stone-400 font-normal ml-1"></span>
+                        </label>
+                        <input id="productStock" type="number" required min="0" step="1" class="input-field" placeholder="20">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="productImageUrl" class="input-label">Image URL</label>
+                    <div class="flex gap-3">
+                        <div class="flex-1 min-w-0">
+                            <input id="productImageUrl" type="text" maxlength="500" class="input-field" placeholder="images/products/classic-dark.jpg  or  https://...">
+                            <p class="text-xs text-stone-500 mt-1.5">Relative path or full URL.</p>
+                        </div>
+                        <div class="w-20 h-20 rounded-lg overflow-hidden bg-milk-cream border border-stone-200 flex items-center justify-center shrink-0">
+                            <img id="productImagePreview" src="" alt="" class="w-full h-full object-cover hidden">
+                            <div id="productImagePlaceholder" class="text-cookie-brown/50">
+                                <x-icon name="cookie" class="w-6 h-6" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input id="productActive" type="checkbox" class="w-4 h-4 rounded border-stone-300 text-chocolate focus:ring-chocolate">
+                        <span class="text-sm text-cookie-brown font-medium">Visible on the menu</span>
+                    </label>
+                </div>
+
+                <div id="productFormError" class="hidden p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"></div>
+            </form>
+
+            <div class="px-5 py-4 border-t border-stone-200 bg-milk-cream/30 flex items-center justify-end gap-2 shrink-0">
+                <button type="button" id="productCancel"
+                        class="px-4 py-2.5 rounded-lg text-sm font-medium text-cookie-brown hover:bg-milk-cream transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" form="productForm" id="productSave"
+                        class="btn-primary !py-2.5 text-sm">
+                    Save Product
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -488,7 +627,185 @@ window.addEventListener('hashchange', () => {
     });
 })();
 
-// ===== PRODUCT ACTIONS =====
+// ===== PRODUCT MODAL =====
+const productModal = document.getElementById('productModal');
+const productModalOverlay = document.getElementById('productModalOverlay');
+const productModalClose = document.getElementById('productModalClose');
+const productCancel = document.getElementById('productCancel');
+const productForm = document.getElementById('productForm');
+const productFormError = document.getElementById('productFormError');
+const productImageInput = document.getElementById('productImageUrl');
+const productImagePreview = document.getElementById('productImagePreview');
+const productImagePlaceholder = document.getElementById('productImagePlaceholder');
+
+function showProductError(msg) {
+    productFormError.textContent = msg;
+    productFormError.classList.remove('hidden');
+}
+
+function clearProductError() {
+    productFormError.textContent = '';
+    productFormError.classList.add('hidden');
+}
+
+function updateImagePreview() {
+    const raw = productImageInput.value.trim();
+    if (!raw) {
+        productImagePreview.classList.add('hidden');
+        productImagePreview.removeAttribute('src');
+        productImagePlaceholder.classList.remove('hidden');
+        return;
+    }
+
+    const url = /^https?:\/\//i.test(raw) ? raw : `/${raw}`;
+    productImagePreview.src = url;
+    productImagePreview.classList.remove('hidden');
+    productImagePlaceholder.classList.add('hidden');
+}
+
+productImagePreview.addEventListener('error', () => {
+    productImagePreview.classList.add('hidden');
+    productImagePlaceholder.classList.remove('hidden');
+});
+
+productImageInput.addEventListener('input', updateImagePreview);
+
+function openProductModal(product = null) {
+    clearProductError();
+
+    document.getElementById('productModalTitle').textContent = product ? 'Edit Product' : 'Add Product';
+    document.getElementById('productId').value = product?.id || '';
+    document.getElementById('productName').value = product?.name || '';
+    document.getElementById('productVariant').value = product?.variant || '';
+    document.getElementById('productDescription').value = product?.description || '';
+    document.getElementById('productPrice').value = product?.price ?? '';
+    document.getElementById('productStock').value = product?.stock ?? '';
+    document.getElementById('productImageUrl').value = product?.image_url || '';
+    document.getElementById('productActive').checked = product ? !!product.is_active : true;
+
+    document.getElementById('priceHint').textContent = product ? `(currently ₱${product.price})` : '';
+    document.getElementById('stockHint').textContent = product ? `(currently ${product.stock})` : '';
+
+    document.getElementById('productSave').textContent = product ? 'Save Changes' : 'Create Product';
+
+    updateImagePreview();
+
+    productModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+
+    setTimeout(() => document.getElementById('productName').focus(), 50);
+}
+
+function closeProductModal() {
+    productModal.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+function editProductRow(btn) {
+    const row = btn.closest('.product-row');
+    const raw = row.getAttribute('data-product');
+    if (!raw) return;
+    try {
+        openProductModal(JSON.parse(raw));
+    } catch (e) {
+        console.error('Failed to parse product', e);
+    }
+}
+
+productForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearProductError();
+
+    const id = document.getElementById('productId').value;
+    const payload = {
+        name:        document.getElementById('productName').value.trim(),
+        variant:     document.getElementById('productVariant').value.trim(),
+        description: document.getElementById('productDescription').value.trim(),
+        price:       parseInt(document.getElementById('productPrice').value, 10),
+        stock:       parseInt(document.getElementById('productStock').value, 10),
+        image_url:   document.getElementById('productImageUrl').value.trim(),
+        is_active:   document.getElementById('productActive').checked,
+    };
+
+    if (!payload.name) return showProductError('Name is required.');
+    if (!payload.variant) return showProductError('Variant is required.');
+    if (!Number.isInteger(payload.price) || payload.price < 0) return showProductError('Enter a valid price.');
+    if (!Number.isInteger(payload.stock) || payload.stock < 0) return showProductError('Enter a valid stock.');
+
+    const url = id ? '/admin/products/update' : '/admin/products';
+    if (id) payload.id = id;
+
+    const saveBtn = document.getElementById('productSave');
+    const originalText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            const msg = data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Save failed.');
+            showProductError(msg);
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalText;
+            return;
+        }
+
+        closeProductModal();
+        location.reload();
+
+    } catch (err) {
+        console.error(err);
+        showProductError('Network error. Please try again.');
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+    }
+});
+
+async function deleteProductRow(id) {
+    if (!id) return;
+    if (!confirm('Delete this product permanently?\n\nThis cannot be undone. Orders that already contain this item keep their snapshot and are unaffected.')) return;
+
+    try {
+        const response = await fetch('/admin/products/delete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({ id }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Delete failed.');
+        }
+    } catch (err) {
+        alert('Something went wrong.');
+    }
+}
+
+productModalClose.addEventListener('click', closeProductModal);
+productCancel.addEventListener('click', closeProductModal);
+productModalOverlay.addEventListener('click', closeProductModal);
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !productModal.classList.contains('hidden')) closeProductModal();
+});
+
+// ===== LEGACY PRODUCT ACTIONS =====
 async function updateStock(productId, stock) {
     try {
         const response = await fetch('/admin/update-stock', {
@@ -592,11 +909,9 @@ async function toggleProduct(productId, isActive) {
             return s;
         };
 
-        // Prev
         const prevIcon = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 19.5-7.5-7.5 7.5-7.5"/></svg>';
         paginator.appendChild(makeBtn(prevIcon, currentPage - 1, { disabled: currentPage === 1, icon: true }));
 
-        // Page numbers
         const pages = [];
         if (tp <= 8) {
             for (let i = 1; i <= tp; i++) pages.push(i);
@@ -623,7 +938,6 @@ async function toggleProduct(productId, isActive) {
             else paginator.appendChild(makeBtn(p, p, { active: p === currentPage }));
         });
 
-        // Next
         const nextIcon = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>';
         paginator.appendChild(makeBtn(nextIcon, currentPage + 1, { disabled: currentPage === tp, icon: true }));
     }
@@ -664,14 +978,17 @@ async function toggleProduct(productId, isActive) {
     }
 
     render(1);
+})();
 
-    // ===== ORDER MODAL =====
+// ===== ORDER DETAIL MODAL =====
+(function () {
     const modal = document.getElementById('orderModal');
     const overlay = document.getElementById('orderModalOverlay');
     const closeBtn = document.getElementById('orderModalClose');
     const modalBody = document.getElementById('orderModalBody');
     const modalOrderNumber = document.getElementById('modalOrderNumber');
-    if (!modal) return;
+    const tbody = document.getElementById('ordersTbody');
+    if (!modal || !tbody) return;
 
     const statusStyleMap = {
         pending:   'badge-warning',
@@ -696,7 +1013,9 @@ async function toggleProduct(productId, isActive) {
         const itemsHtml = (order.items || []).map(item => {
             const qty = item.quantity || 1;
             const price = item.price || 0;
-            const img = item.image_url ? `/${item.image_url}` : null;
+            const img = item.image_url
+                ? (item.image_url.match(/^https?:\/\//i) ? item.image_url : `/${item.image_url}`)
+                : null;
             const imgHtml = img
                 ? `<img src="${img}" alt="" class="w-full h-full object-cover">`
                 : `<div class="w-full h-full flex items-center justify-center text-cookie-brown/50"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><circle cx="12" cy="12" r="9"/></svg></div>`;
@@ -715,8 +1034,14 @@ async function toggleProduct(productId, isActive) {
             ? 'Campus Pickup — UCC Congressional'
             : `${order.delivery_type.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}${order.delivery_address ? ' — ' + order.delivery_address : ''}`;
 
+        const paymentLine = (order.payment_method || 'online') === 'in_person'
+            ? '<strong>In person</strong> — cash at pickup'
+            : '<strong>Online</strong> — GCash / Maya';
+
         let actionButtons = '';
-        if (order.status === 'paid') {
+        if (order.status === 'pending' && (order.payment_method || 'online') === 'in_person') {
+            actionButtons = `<button type="button" onclick="modalMarkPaid('${order.id}')" class="w-full inline-flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-medium px-6 py-2.5 rounded-xl transition-colors text-sm">Confirm Payment Received</button>`;
+        } else if (order.status === 'paid') {
             actionButtons = `<button type="button" onclick="modalUpdateStatus('${order.id}', 'preparing')" class="btn-primary !py-2.5 text-sm w-full">Start Preparing</button>`;
         } else if (order.status === 'preparing') {
             actionButtons = `<button type="button" onclick="modalUpdateStatus('${order.id}', 'ready')" class="w-full inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2.5 rounded-xl transition-colors text-sm">Mark Ready for Pickup</button>`;
@@ -748,6 +1073,11 @@ async function toggleProduct(productId, isActive) {
                     <p class="text-[10px] uppercase tracking-wider text-stone-400 font-bold mb-2">Delivery</p>
                     <p class="text-sm text-cookie-brown">${deliveryLine}</p>
                     ${order.eta ? `<p class="text-xs text-stone-500 mt-1">ETA: ${order.eta}</p>` : ''}
+                </div>
+
+                <div>
+                    <p class="text-[10px] uppercase tracking-wider text-stone-400 font-bold mb-2">Payment</p>
+                    <p class="text-sm text-cookie-brown">${paymentLine}</p>
                 </div>
 
                 <div>
@@ -803,6 +1133,20 @@ async function toggleProduct(productId, isActive) {
             const data = await response.json();
             if (data.success) { closeModal(); location.reload(); }
             else alert(data.message || 'Update failed.');
+        } catch (err) { alert('Something went wrong.'); }
+    };
+
+    window.modalMarkPaid = async function (orderId) {
+        if (!confirm('Confirm payment was received?')) return;
+        try {
+            const response = await fetch('/admin/mark-paid', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ order_id: orderId }),
+            });
+            const data = await response.json();
+            if (data.success) { closeModal(); location.reload(); }
+            else alert(data.message || 'Failed to confirm.');
         } catch (err) { alert('Something went wrong.'); }
     };
 })();

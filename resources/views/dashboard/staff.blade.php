@@ -5,7 +5,6 @@
 
 @section('content')
 
-{{-- Live indicator + refresh --}}
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
     <p class="flex items-center gap-2 text-xs text-stone-500">
         <span class="inline-flex items-center gap-1.5">
@@ -24,9 +23,19 @@
     </button>
 </div>
 
-{{-- Stats --}}
-<div class="grid grid-cols-3 gap-3 md:gap-4 mb-5">
-    <div class="rounded-2xl bg-amber-50 border border-amber-200 p-4 md:p-5 flex items-center gap-3">
+{{-- Stats — 4 cards --}}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-5">
+    <div class="rounded-2xl bg-stone-50 border border-stone-200 p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 shrink-0">
+            <x-icon name="clock" class="w-5 h-5" />
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="font-display font-extrabold text-2xl md:text-3xl text-stone-700 leading-none" id="statPending">0</p>
+            <p class="text-[10px] md:text-xs text-stone-600 font-medium mt-1">Awaiting Payment</p>
+        </div>
+    </div>
+
+    <div class="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-center gap-3">
         <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 shrink-0">
             <x-icon name="orders" class="w-5 h-5" />
         </div>
@@ -36,7 +45,7 @@
         </div>
     </div>
 
-    <div class="rounded-2xl bg-blue-50 border border-blue-200 p-4 md:p-5 flex items-center gap-3">
+    <div class="rounded-2xl bg-blue-50 border border-blue-200 p-4 flex items-center gap-3">
         <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 shrink-0">
             <x-icon name="staff" class="w-5 h-5" />
         </div>
@@ -46,7 +55,7 @@
         </div>
     </div>
 
-    <div class="rounded-2xl bg-green-50 border border-green-200 p-4 md:p-5 flex items-center gap-3">
+    <div class="rounded-2xl bg-green-50 border border-green-200 p-4 flex items-center gap-3">
         <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 shrink-0">
             <x-icon name="check" class="w-5 h-5" stroke-width="2.5" />
         </div>
@@ -57,12 +66,28 @@
     </div>
 </div>
 
-{{-- Order queue --}}
-<div id="orderQueue" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-    @include('dashboard.partials.order-queue', ['orders' => $orders])
-</div>
+{{-- Awaiting Payment Section --}}
+<section id="pendingSection" class="mb-6 hidden">
+    <div class="flex items-center gap-3 mb-3">
+        <h2 class="font-display font-bold text-base text-oreo-noir">Awaiting In-Person Payment</h2>
+        <span class="badge bg-amber-100 text-amber-800" id="pendingBadge">0</span>
+    </div>
+    <p class="text-xs text-stone-500 mb-3">
+        These orders are reserved. When the customer arrives, collect payment and click <strong>Confirm Payment Received</strong>.
+    </p>
+    <div id="pendingQueue" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+</section>
 
-{{-- Toast --}}
+{{-- Active Queue --}}
+<section>
+    <div class="flex items-center gap-3 mb-3">
+        <h2 class="font-display font-bold text-base text-oreo-noir">Active Orders</h2>
+    </div>
+    <div id="orderQueue" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        @include('dashboard.partials.order-queue', ['orders' => $orders])
+    </div>
+</section>
+
 <div id="newOrderToast" class="fixed top-4 right-4 left-4 sm:left-auto sm:top-6 sm:right-6 z-50 hidden">
     <div class="bg-oreo-noir text-milk-cream rounded-2xl shadow-lift px-5 py-4 flex items-center gap-3 sm:min-w-[280px]">
         <div class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white shrink-0">
@@ -72,7 +97,7 @@
         </div>
         <div class="flex-1 min-w-0">
             <p class="font-display font-bold text-sm">New Order!</p>
-            <p class="text-xs text-stone-400 truncate" id="toastMessage">A new paid order just arrived</p>
+            <p class="text-xs text-stone-400 truncate" id="toastMessage">A new order just arrived</p>
         </div>
     </div>
 </div>
@@ -82,8 +107,22 @@
 @push('scripts')
 <script>
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
-let previousCount = {{ collect($orders)->count() }};
+
+// Initial counts from server-rendered content
+let previousActive  = {{ collect($orders)->count() }};
+let previousPending = {{ collect($pendingInPerson ?? [])->count() }};
 let isFirstLoad = true;
+
+// Render pending section on first load
+document.addEventListener('DOMContentLoaded', () => {
+    const pendingOrders = document.getElementById('pendingQueue');
+    @if(isset($pendingInPerson) && count($pendingInPerson) > 0)
+        pendingOrders.innerHTML = `@include('dashboard.partials.order-queue', ['orders' => $pendingInPerson])`;
+        document.getElementById('pendingSection').classList.remove('hidden');
+        document.getElementById('pendingBadge').textContent = {{ count($pendingInPerson) }};
+        document.getElementById('statPending').textContent = {{ count($pendingInPerson) }};
+    @endif
+});
 
 async function updateStatus(orderId, status) {
     if (status === 'cancelled' && !confirm('Cancel this order?')) return;
@@ -103,34 +142,64 @@ async function updateStatus(orderId, status) {
     }
 }
 
+async function markPaid(orderId) {
+    if (!confirm('Confirm payment was received? This will move the order into the kitchen queue.')) return;
+
+    try {
+        const response = await fetch('/staff/mark-paid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ order_id: orderId }),
+        });
+        const data = await response.json();
+        if (data.success) refreshQueue();
+        else alert(data.message || 'Failed to confirm.');
+    } catch (err) {
+        alert('Something went wrong.');
+    }
+}
+
 async function refreshQueue(showFeedback = false) {
     const btn = event?.target?.closest('button');
     const original = btn?.innerHTML;
 
     try {
-        const response = await fetch('/staff/queue', { headers: { 'Accept': 'text/html' } });
-        const html = await response.text();
+        const response = await fetch('/staff/queue', { headers: { 'Accept': 'application/json' } });
+        const data = await response.json();
 
-        document.getElementById('orderQueue').innerHTML = html;
+        document.getElementById('orderQueue').innerHTML = data.active;
+        document.getElementById('pendingQueue').innerHTML = data.pending;
 
-        const counts = { paid: 0, preparing: 0, ready: 0 };
-        document.querySelectorAll('.order-card').forEach(card => {
-            const s = card.dataset.status;
-            if (counts[s] !== undefined) counts[s]++;
-        });
-        document.getElementById('statPaid').textContent = counts.paid;
-        document.getElementById('statPreparing').textContent = counts.preparing;
-        document.getElementById('statReady').textContent = counts.ready;
+        const pendingCount = data.counts.pending;
+        const activeCount  = data.counts.paid + data.counts.preparing + data.counts.ready;
 
-        const newCount = counts.paid + counts.preparing + counts.ready;
+        document.getElementById('statPending').textContent   = pendingCount;
+        document.getElementById('statPaid').textContent      = data.counts.paid;
+        document.getElementById('statPreparing').textContent = data.counts.preparing;
+        document.getElementById('statReady').textContent     = data.counts.ready;
 
-        if (!isFirstLoad && newCount > previousCount) {
-            playAlertSound();
-            showToast(`You have ${newCount - previousCount} new order(s)!`);
+        // Toggle pending section visibility
+        const pendingSection = document.getElementById('pendingSection');
+        if (pendingCount > 0) {
+            pendingSection.classList.remove('hidden');
+            document.getElementById('pendingBadge').textContent = pendingCount;
+        } else {
+            pendingSection.classList.add('hidden');
         }
-        previousCount = newCount;
 
-        if (isFirstLoad) isFirstLoad = false;
+        // Alerts
+        if (!isFirstLoad) {
+            if (activeCount > previousActive) {
+                playAlertSound();
+                showToast(`You have ${activeCount - previousActive} new paid order(s)!`);
+            } else if (pendingCount > previousPending) {
+                playAlertSound();
+                showToast(`You have ${pendingCount - previousPending} new reservation(s)!`);
+            }
+        }
+        previousActive = activeCount;
+        previousPending = pendingCount;
+        isFirstLoad = false;
 
         if (showFeedback && btn) {
             btn.innerHTML = '✓ Refreshed';

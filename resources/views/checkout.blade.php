@@ -4,6 +4,10 @@
 
 @section('content')
 
+@php
+    $authUser = session('auth_user');
+@endphp
+
 <section class="bg-white border-b border-stone-200">
     <div class="container-app py-6 md:py-8">
         <nav class="flex items-center gap-2 text-xs text-stone-500 mb-2">
@@ -23,7 +27,6 @@
 <section class="container-app py-6 md:py-10">
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 md:gap-8">
 
-        {{-- QR panel (hidden until payment intent is created) --}}
         <div id="qr-container" class="hidden lg:col-span-5 max-w-lg mx-auto card p-8"></div>
 
         {{-- LEFT --}}
@@ -45,6 +48,7 @@
                     <div>
                         <label for="customerName" class="input-label">Full Name *</label>
                         <input id="customerName" type="text" placeholder="Juan Dela Cruz"
+                               value="{{ old('customer_name', $authUser['full_name'] ?? '') }}"
                                autocomplete="name" class="input-field">
                     </div>
                     <div>
@@ -55,6 +59,7 @@
                     <div>
                         <label for="customerEmail" class="input-label">Email *</label>
                         <input id="customerEmail" type="email" placeholder="juan@example.com"
+                               value="{{ old('customer_email', $authUser['email'] ?? '') }}"
                                autocomplete="email" class="input-field">
                     </div>
                 </div>
@@ -108,6 +113,51 @@
                            autocomplete="street-address" class="input-field">
                 </div>
             </div>
+
+            {{-- Payment Method --}}
+            <div class="card p-5 md:p-6">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-9 h-9 rounded-full bg-milk-cream flex items-center justify-center text-cookie-brown shrink-0">
+                        <x-icon name="credit-card" class="w-4 h-4" />
+                    </div>
+                    <div>
+                        <h2 class="font-display font-bold text-oreo-noir">Payment Method</h2>
+                        <p class="text-xs text-stone-500">How would you like to pay?</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="flex items-start justify-between gap-3 p-4 rounded-xl border cursor-pointer transition-all
+                                  has-[:checked]:border-chocolate has-[:checked]:bg-milk-cream
+                                  border-stone-200 hover:border-stone-300">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <input type="radio" name="paymentMethod" value="online" checked
+                                   class="mt-0.5 w-4 h-4 text-chocolate focus:ring-chocolate shrink-0">
+                            <div class="min-w-0">
+                                <p class="font-medium text-oreo-noir text-sm">Pay online — GCash / Maya</p>
+                                <p class="text-xs text-stone-500 mt-0.5">Scan a QR code, pay from your banking app. Order confirmed instantly.</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="flex items-start justify-between gap-3 p-4 rounded-xl border cursor-pointer transition-all
+                                  has-[:checked]:border-chocolate has-[:checked]:bg-milk-cream
+                                  border-stone-200 hover:border-stone-300">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <input type="radio" name="paymentMethod" value="in_person"
+                                   class="mt-0.5 w-4 h-4 text-chocolate focus:ring-chocolate shrink-0">
+                            <div class="min-w-0">
+                                <p class="font-medium text-oreo-noir text-sm">Pay in person — cash at pickup</p>
+                                <p class="text-xs text-stone-500 mt-0.5">Reserve now, show your order number and pay when you pick up. Confirmed by staff.</p>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+
+                <div id="inPersonNote" class="hidden mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                    <strong class="font-semibold">Heads up:</strong> your order will be reserved for 24 hours. Bring exact cash if possible — our kiosk may not have change for large bills.
+                </div>
+            </div>
         </div>
 
         {{-- RIGHT --}}
@@ -149,8 +199,8 @@
                     Pay with GCash
                 </button>
 
-                <p class="text-xs text-stone-500 text-center mt-3 leading-relaxed">
-                    Scan the QR code with GCash to authorize the payment. Order will be prepared once confirmed.
+                <p id="payHint" class="text-xs text-stone-500 text-center mt-3 leading-relaxed">
+                    You'll see a QR code. Scan it with GCash or your bank app to pay.
                 </p>
 
                 <div class="mt-5 pt-5 border-t border-stone-100">

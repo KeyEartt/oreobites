@@ -2,9 +2,8 @@
 
 @php
     $inStock = ($product['stock'] ?? 0) > 0;
-    $imageUrl = !empty($product['image_url']) ? asset($product['image_url']) : null;
+    $imageUrl = img_url($product['image_url'] ?? null);
 
-    // Variant badge colors
     $variantStyles = [
         'Dark'  => 'bg-oreo-noir text-milk-cream',
         'White' => 'bg-milk-cream text-cookie-brown border border-stone-200',
@@ -16,7 +15,6 @@
 <article class="group card-hover overflow-hidden flex flex-col"
          data-product-id="{{ $product['id'] }}">
 
-    {{-- Image --}}
     <div class="relative aspect-square bg-milk-cream overflow-hidden">
         @if($imageUrl)
             <img src="{{ $imageUrl }}"
@@ -24,18 +22,15 @@
                  loading="lazy"
                  class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
         @else
-            {{-- Fallback: branded cookie --}}
             <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-cookie-brown/10 to-oreo-noir/5">
                 <x-icon name="cookie" class="w-20 h-20 text-cookie-brown/40" stroke-width="1" />
             </div>
         @endif
 
-        {{-- Variant badge (top-left) --}}
         <span class="absolute top-3 left-3 badge {{ $variantClass }} backdrop-blur-sm">
             {{ $product['variant'] }}
         </span>
 
-        {{-- Stock badge (top-right) --}}
         @if(!$inStock)
             <span class="absolute top-3 right-3 badge bg-red-100 text-red-700">
                 Sold out
@@ -47,7 +42,6 @@
         @endif
     </div>
 
-    {{-- Body --}}
     <div class="flex flex-col flex-1 p-5">
         <div class="flex-1">
             <h3 class="font-display font-bold text-lg text-oreo-noir leading-tight">
@@ -71,7 +65,6 @@
             @endif
         </div>
 
-        {{-- Footer: price + button --}}
         <div class="flex items-end justify-between mt-5 pt-4 border-t border-stone-100">
             <div>
                 <p class="text-[10px] uppercase tracking-wider text-stone-400 font-semibold">Price</p>

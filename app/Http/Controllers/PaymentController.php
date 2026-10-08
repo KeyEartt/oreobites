@@ -30,8 +30,10 @@ class PaymentController extends Controller
             'customer_email'       => 'required|email',
             'delivery_type'        => 'required|in:pickup,standard,same_day',
             'delivery_address'     => 'nullable|string',
+            'payment_method'       => 'required|in:online,in_person',
         ]);
 
+        // ===== Delivery zone =====
         $zones = $supabase->fetchDeliveryZones();
         $zone  = collect($zones)->firstWhere('type', $validated['delivery_type']);
         if (!$zone) {
@@ -42,6 +44,7 @@ class PaymentController extends Controller
             ? 'Ready immediately'
             : $zone['estimated_minutes'] . ' minutes';
 
+        // ===== Stock + subtotal =====
         $subtotal      = 0;
         $enrichedItems = [];
 
@@ -71,6 +74,45 @@ class PaymentController extends Controller
         }
 
         $total            = $subtotal + $deliveryFee;
+        $orderNumber      = 'ORE-' . date('Ymd') . '-' . strtoupper(Str::random(6));
+        $paymentMethod    = $validated['payment_method'];
+
+        // ===== In-person flow — skip PayMongo entirely =====
+        if ($paymentMethod === 'in_person') {
+            $orderData = [
+                'order_number'      => $orderNumber,
+                'user_id'           => $authUser['id'],
+                'customer_name'     => $validated['customer_name'],
+                'customer_phone'    => $validated['customer_phone'],
+                'customer_email'    => $validated['customer_email'],
+                'delivery_type'     => $validated['delivery_type'],
+                'delivery_fee'      => $deliveryFee,
+                'delivery_address'  => $validated['delivery_type'] === 'pickup'
+                    ? null
+                    : ($validated['delivery_address'] ?? null),
+                'subtotal'          => $subtotal,
+                'total'             => $total,
+                'items'             => $enrichedItems,
+                'payment_method'    => 'in_person',
+                'payment_intent_id' => null,
+                'payment_status'    => 'unpaid',
+                'status'            => 'pending',
+                'eta'               => $eta,
+            ];
+
+            $saved = $supabase->createOrder($orderData);
+            if (!$saved) {
+                return response()->json(['error' => 'Failed to save order.'], 500);
+            }
+
+            return response()->json([
+                'payment_method' => 'in_person',
+                'orderNumber'    => $orderNumber,
+                'total'          => $total,
+            ]);
+        }
+
+        // ===== Online flow — PayMongo PI → PM → attach =====
         $amountInCentavos = (int) round($total * 100);
 
         $piResponse = $paymongo->createPaymentIntent(
@@ -101,8 +143,6 @@ class PaymentController extends Controller
 
         $testUrl = $attachResponse['data']['attributes']['next_action']['code']['test_url'] ?? null;
 
-        $orderNumber = 'ORE-' . date('Ymd') . '-' . strtoupper(Str::random(6));
-
         $orderData = [
             'order_number'      => $orderNumber,
             'user_id'           => $authUser['id'],
@@ -117,18 +157,20 @@ class PaymentController extends Controller
             'subtotal'          => $subtotal,
             'total'             => $total,
             'items'             => $enrichedItems,
+            'payment_method'    => 'online',
             'payment_intent_id' => $paymentIntentId,
             'payment_status'    => 'unpaid',
             'status'            => 'pending',
             'eta'               => $eta,
         ];
 
-        $savedOrder = $supabase->createOrder($orderData);
-        if (!$savedOrder) {
+        $saved = $supabase->createOrder($orderData);
+        if (!$saved) {
             return response()->json(['error' => 'Failed to save order.'], 500);
         }
 
         return response()->json([
+            'payment_method'    => 'online',
             'qr_image'          => $qrImageUrl,
             'test_url'          => $testUrl,
             'orderNumber'       => $orderNumber,
