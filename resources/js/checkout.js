@@ -2,6 +2,40 @@ import { getCart } from './cart.js';
 
 let activePoll = null;
 
+const fetchJSON = async (url, options = {}) => {
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...(options.headers || {}),
+        },
+    });
+
+    // 419 CSRF mismatch — reload the page to get a fresh token
+    if (response.status === 419) {
+        alert('Your session expired. The page will reload to refresh your session.');
+        window.location.reload();
+        throw new Error('Session expired');
+    }
+
+    // Try to parse JSON; fall back to text for debugging
+    const text = await response.text();
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (e) {
+        console.error('Non-JSON response from ' + url + ':', text.substring(0, 500));
+        throw new Error('Server returned an unexpected response. Please try again.');
+    }
+
+    if (!response.ok) {
+        throw new Error(data.error || data.message || 'Request failed.');
+    }
+
+    return data;
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const cart = getCart();
     const summaryEl = document.getElementById('orderSummary');
@@ -44,6 +78,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function currentDeliveryType() {
         return document.querySelector('input[name="deliveryType"]:checked')?.value || 'pickup';
+    }
+
+    function csrfToken() {
+        return document.querySelector('meta[name="csrf-token"]')?.content || '';
     }
 
     function updateTotals() {
@@ -111,11 +149,10 @@ document.addEventListener('DOMContentLoaded', () => {
             : 'Generating QR…';
 
         try {
-            const response = await fetch('/api/create-payment', {
+            const data = await fetchJSON('/api/create-payment', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                    'X-CSRF-TOKEN': csrfToken(),
                 },
                 body: JSON.stringify({
                     items: cart,
@@ -128,21 +165,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }),
             });
 
-            const data = await response.json();
-
-            if (response.status === 401) { window.location.href = '/login'; return; }
-
-            if (!response.ok || data.error) throw new Error(data.error || 'Payment failed.');
-
             localStorage.removeItem('oreo-cart');
 
-            // In-person: instant success page
             if (data.payment_method === 'in_person') {
                 window.location.href = `/success?order=${encodeURIComponent(data.orderNumber)}`;
                 return;
             }
 
-            // Online: show QR + poll
             if (!data.qr_image || !data.orderNumber) {
                 throw new Error('Payment gateway returned an unexpected response.');
             }

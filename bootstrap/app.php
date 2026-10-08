@@ -13,8 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Exclude PayMongo webhook from CSRF
         $middleware->validateCsrfTokens(except: [
-            'api/webhook',
-        ]);
+    'api/webhook',
+    'api/create-payment',  // session-authenticated, but token may expire on long forms
+]);
 
         // Register custom middleware aliases
         $middleware->alias([
