@@ -304,6 +304,54 @@ class SupabaseService
             return null;
         }
     }
+        public function findProfileByGoogleId($googleId)
+    {
+        try {
+            $response = $this->serviceClient->get(
+                "profiles?google_id=eq." . urlencode($googleId) . "&select=*"
+            );
+            $data = json_decode($response->getBody(), true);
+            return $data[0] ?? null;
+        } catch (\Exception $e) {
+            Log::error('findProfileByGoogleId: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function linkGoogleAccount($profileId, $googleId)
+    {
+        try {
+            $this->serviceClient->patch("profiles?id=eq.{$profileId}", [
+                'json' => [
+                    'google_id'  => $googleId,
+                    'updated_at' => now()->utc()->format('Y-m-d\TH:i:s\Z'),
+                ],
+            ]);
+            return true;
+        } catch (\Exception $e) {
+            Log::error('linkGoogleAccount: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function createGoogleProfile($data)
+    {
+        try {
+            $response = $this->serviceClient->post('profiles', [
+                'json'    => $data,
+                'headers' => ['Prefer' => 'return=representation'],
+            ]);
+            $body = json_decode($response->getBody(), true);
+            return $body[0] ?? null;
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            Log::error('createGoogleProfile FAILED: ' . $e->getResponse()->getBody()->getContents());
+            Log::error('Payload: ' . json_encode($data));
+            return null;
+        } catch (\Exception $e) {
+            Log::error('createGoogleProfile FAILED: ' . $e->getMessage());
+            return null;
+        }
+    }
 
     public function findProfileById($id)
     {
